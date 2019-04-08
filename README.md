@@ -6,7 +6,7 @@ This is currently the Monore DEV branch.
 The rationale behind this repo/package is to allow monroe (with minimal dependencys) to be installed on a fresh Debian installation.
 
 ## How to install
-1. Intstall a fresh debian stretch (with defaults) 
+1. Install a fresh debian stretch (with defaults) 
 2. Install docker: ```curl -fsSL https://get.docker.com -o get-docker.sh && sh get-docker.sh```
 3. Install monroe-experiment-core
     1. Get circle and table-allocator-* deb packages (build or get from a running monroe node)
