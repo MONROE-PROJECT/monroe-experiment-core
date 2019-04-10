@@ -1,0 +1,275 @@
+#!/bin/bash
+set -e
+
+# Default variables
+VETH_IPRANGE=172.18
+METADATA_IPRANGE=172.17.0
+EXCLUDED_IF="Br|lo|metadata|wwan|ifb|docker"
+OPINTERFACES="nlw_|wwan"
+DNS_TEST_URL="www.monroe-system.eu"
+UPDATE_INTERFACES_MNS=30
+MONROE_NAMESPACE_CONTAINER_NAME=monroe-namespace
+MNS="ip netns exec monroe"
+ADD_FW_ANTI_LOCKOUT_RULE=1
+
+# -le 0 will setup the namespace and exit, usable with _DEBUG_=1
+
+URL_NOOP="monroe/base:complete"
+
+# Update above default variables if needed 
+. /etc/default/monroe-experiments
+
+#Internal varilables
+_INVOKED_FROM_SYSTEMD_="$INVOCATION_ID"
+_MNR_NAMESPACE_PATH_=/var/run/netns/monroe
+_DEBUG_=0
+
+export PATH=/usr/bin/:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+
+if [ -z "${_INVOKED_FROM_SYSTEMD_}" ] && [ ${_DEBUG_} -eq 0 ]; then
+  echo "Do not run this script manually, use systemd"
+  echo "systemctl start/stop/status monroe-namespace.service"
+  exit 1
+fi
+
+#Anti lockout-rule if circle is not configured
+if [ -z "$(ls -A /etc/circle.d/ 2>/dev/null)" ] && [ "$ADD_FW_ANTI_LOCKOUT_RULE" -eq 1 ]; then
+  mkdir -p /etc/circle.d/
+  TARGET="/etc/circle.d/100-default-accept.rules"
+  RULES="\
+\${ipt4} -A INPUT -j ACCEPT
+\${ipt4} -A OUTPUT -j ACCEPT
+\${ipt4} -A FORWARD -j ACCEPT"
+  echo "$RULES" > $TARGET
+fi
+
+
+function _log_ {
+	echo $1
+}
+
+function iftable {
+  # return the routing table that holds routing data for a given interface
+  # $1 - interface name (e.g wwan0)
+  ip route show dev $1 table all |grep default | awk '{for (i=1;i<=NF;i++){if($i=="table"){print $(i+1)}}}'
+}
+
+function update_dnsmasq_conf {
+  # create regex to replace interface names
+  # no parameters, copies and replaces a file in /tmp
+  TRANSLATE=""
+  for i in $(ls /sys/class/net/|egrep -v $EXCLUDED_IF); do
+    if [ ! -z "$(echo $i|egrep $OPINTERFACES)" ] && [ -x /usr/bin/usb2op ]; then 
+      OPIF=$(/usr/bin/usb2op $i)
+    else
+      OPIF=$i
+    fi
+    IPAD=$(/usr/bin/monroe-ifnum $i $VETH_IPRANGE).2
+    TRANSLATE="$TRANSLATE -e s/[0-9.]\+@$i/$IPAD@$OPIF/g"
+  done
+
+  mv /tmp/dnsmasq-servers-netns-monroe.conf /tmp/dnsmasq-servers-netns-monroe.bak || true
+  cat /etc/dnsmasq.d/dnsmasq-custom.conf | grep -v servers-file | grep -v "=8.8" > /tmp/dnsmasq-servers-netns-monroe.conf
+  sed $TRANSLATE /tmp/dnsmasq-servers.conf >> /tmp/dnsmasq-servers-netns-monroe.conf
+
+  # return non-empty if the files differ, or the bak file does not exist
+  diff /tmp/dnsmasq-servers-netns-monroe.conf /tmp/dnsmasq-servers-netns-monroe.bak 2>&1 || true
+}
+
+##############################################################################
+
+# Init namespace
+
+# TODO: Is this the best way to ensure that URL_NOOP exist?
+# ensure base image is pulled
+echo -n "Ensure base images are up-to-date: "
+docker images --format "{{.Repository}}:{{.Tag}}" | grep $URL_NOOP || pull-base-containers
+
+# TODO: Replace the following with docker network create --driver bridge monroe?
+# GET : ContainerID of running Namespace container if exists)
+CID=$(docker ps --no-trunc -qf name=$MONROE_NAMESPACE_CONTAINER_NAME)
+
+echo -n "Starting Monroe Namespace: "
+if [ ! -e ${_MNR_NAMESPACE_PATH_} ] || [ -z "$CID" ]; then
+  # Make sure that all monroe containers are stopped
+  echo ''
+  for CONTAINER in $(docker ps -q); do
+    IMAGENAME=$(docker inspect --format '{{.Config.Image}}' $CONTAINER)
+    if [[ "$IMAGENAME" == "monroe-"* ]] || [[ "$IMAGENAME" == "base-"* ]] ; then
+        echo -ne "\t* Stopping monroe container: "
+	docker stop -t 0 $CONTAINER 2>/dev/null
+    fi
+  done
+  # Remove the monroe-namespace container
+  echo -ne "\t* Removing monroe container: "
+  docker rm -f $MONROE_NAMESPACE_CONTAINER_NAME 2>/dev/null || true
+
+  echo -ne "\t* Starting Monroe Namespace: "
+  docker run -d --net=none --name $MONROE_NAMESPACE_CONTAINER_NAME base-$URL_NOOP /bin/sh /opt/monroe/noop.sh
+  CID=$(docker ps --no-trunc -qf name=$MONROE_NAMESPACE_CONTAINER_NAME)
+  if [ -z "$CID" ]; then
+     _log_ "Network namespace Could not start."
+     exit 1
+  fi
+  PID=$(docker inspect -f '{{.State.Pid}}' $CID)
+  mkdir -p $(dirname ${_MNR_NAMESPACE_PATH_})
+  ln -sFf /proc/$PID/ns/net ${_MNR_NAMESPACE_PATH_}
+
+  echo -ne "\t* Adding metadata interface ($METADATA_IPRANGE.1/24 -> $METADATA_IPRANGE.2/24): "
+  ip link del montmp 2>/dev/null || true
+  ip link del metadata 2>/dev/null || true
+  ip link add metadata type veth peer name montmp
+  ip link set montmp netns monroe
+  ip addr add $METADATA_IPRANGE.1/24 dev metadata
+  ip link set metadata up
+  ${MNS} ip link set montmp name metadata
+  ${MNS} ip addr add $METADATA_IPRANGE.2/24 dev metadata
+  ${MNS} ip link set metadata up
+  # Make the metadata IP be resolvable MNS and Host share /etc/hosts
+  sed -i '/metadata/d' /etc/hosts
+  echo -e "$METADATA_IPRANGE.1\tmetadata" >> /etc/hosts
+  echo " done."
+
+  _log_ "Started noop container and monroe netns."
+else
+  echo " -> done"
+fi
+
+# Init Namespace Done
+
+# Loop while namesapce is up 
+while [ -e ${_MNR_NAMESPACE_PATH_} ] || [ ! -z "$(docker ps --no-trunc -qf name=$MONROE_NAMESPACE_CONTAINER_NAME)" ]; do
+  _UPDATE_FIREWALL_="0"
+
+  DNS_CHANGED=$(update_dnsmasq_conf)
+  LOOKUP_FAIL=$(${MNS} nslookup -timeout=1 $DNS_TEST_URL 2>&1 >/dev/null ; echo $?) 
+
+  if [ -z "$(pgrep -f dnsmasq-monroe)" ]; then
+    _log_ "dnsmasq is not started, restarting."
+    ${MNS} /usr/sbin/dnsmasq -C /tmp/dnsmasq-servers-netns-monroe.conf -x /run/dnsmasq/dnsmasq-monroe.pid -u dnsmasq
+  elif [ $LOOKUP_FAIL ] || [ ! -z "$DNS_CHANGED" ]; then
+    kill -9 $(cat /run/dnsmasq/dnsmasq-monroe.pid) || true
+    ${MNS} /usr/sbin/dnsmasq -C /tmp/dnsmasq-servers-netns-monroe.conf -x /run/dnsmasq/dnsmasq-monroe.pid -u dnsmasq
+  fi
+
+  INTERFACES_TO_BRIDGE="$(ls /sys/class/net/|egrep -v $EXCLUDED_IF)" || true
+  CURRENT_BRIDGES="$(ls /sys/class/net/|grep Br)" || true
+  IFB_INTERFACES="$(ls /sys/class/net/|grep ifb)" || true
+
+  # Clean up OLD Bridges (auto cleans {MNS})
+  echo -n "Cleaning up old bridge interfaces: "
+  for BRIF in $CURRENT_BRIDGES; do
+    IF=${BRIF::-2}  # Remove Br to get to the InterfaceName 
+    if [[ $INTERFACES_TO_BRIDGE != *$IF* ]]; then
+      echo -n "."
+      ip link del $BRIF 2>/dev/null || true
+      rm -f /etc/circle.d/50-$IF-nat.rules
+      _UPDATE_FIREWALL_="1"
+    fi
+  done
+  echo " done"
+
+  if [ ! -z "$IFB_INTERFACES" ];then 
+    echo -n "Create IFB Interface (if not already there): "
+    for IF in $INTERFACES_IFB; do
+      echo -n " $IF,"
+      ip l set $IF netns monroe 2>/dev/null || true
+    done
+    echo " done"
+  fi
+
+  echo "Creating/Updating Interface bridges: "
+  for IF in $INTERFACES_TO_BRIDGE; do
+    if [ ! -z "$(echo $IF|egrep $OPINTERFACES)" ] && [ -x /usr/bin/usb2op ]; then
+        OP=$(/usr/bin/usb2op $IF)
+    else
+        OP=$IF
+    fi
+    if [ ! -z "$(ip link|grep 'state DOWN'|grep ${IF}:)" ]; then
+      if [ ! -z "$(${MNS} ip link|grep ${OP}@)" ]; then
+        echo -e "\tHost $IF is down -> set Monroe NS $OP down."
+        ${MNS} ip link set $OP down 2>/dev/null || true
+      else
+        echo -e "\tHost $IF is down and no Monroe NS $OP -> skip."
+      fi
+      continue
+    fi
+    if [ ! -z "$(${MNS} ip link|grep ${OP}@)" ]; then   # We assume the host interface is up 
+      echo -e "\tHost $IF is up -> set Monroe NS $OP up"
+      ${MNS} ip link set $OP up
+      continue
+    fi
+    if [ -z "$(ip link|grep ${IF}Br:)" ]; then
+      echo -ne "\tCreate Bridge Host $IF to Monroe $OP: "
+      IPRANGE=$(/usr/bin/monroe-ifnum $IF $VETH_IPRANGE)
+      TABLE=$(iftable $IF)
+      if [ -z "$TABLE" ]; then
+        echo "No host route for $IF -> skip"
+        continue
+      fi
+      OUTMASK=$(ip a show dev $IF|grep inet|head -n 1|cut -f6 -d' ')
+      OUTRANGE="${OUTMASK%.*}"
+      OUTADDR="${OUTMASK%/*}"
+      MTU=$(cat /sys/class/net/${IF}/mtu)
+
+      echo -ne "\n\t\t* Create veth pair -> "
+      # create veth interface pair
+      ip link del montmp 2>/dev/null || true
+      ip link del ${IF}Br 2>/dev/null || true
+      ip link add ${IF}Br type veth peer name montmp
+      ip link set dev ${IF}Br mtu $MTU
+      ip link set dev montmp mtu $MTU
+      ip link set montmp netns monroe
+      ip addr add ${IPRANGE}.1/24 dev ${IF}Br
+      ip link set ${IF}Br up
+      ${MNS} ip link set montmp name $OP
+      ${MNS} ip addr add ${IPRANGE}.2/24 dev $OP
+      ${MNS} ip link set $OP up
+      echo "done"
+
+      echo -ne "\t\t* Create NAT rules -> "
+      # Firewall masquerade internal IFBr to IF
+      TARGET="/etc/circle.d/50-$IF-nat.rules"
+      RULES="\
+\${ipt4} -t nat -A POSTROUTING -s ${IPRANGE}.2/24 -o ${IF} -j MASQUERADE
+\${ipt4} -I FORWARD 1 -i ${IF} -o ${IF}Br -j ACCEPT
+\${ipt4} -I FORWARD 1 -i ${IF}Br -o ${IF} -j ACCEPT"
+      echo "$RULES" > $TARGET
+      _UPDATE_FIREWALL_="1"
+      echo "done"
+
+      echo -ne "\t\t* Create routing tables in Monroe NS for $OP (${IPRANGE}.2 via ${IPRANGE}.1) -> "
+      # Routing OP to gateway in netns monroe
+      ${MNS} ip ro flush table $TABLE || true
+      ${MNS} ip ro add default via ${IPRANGE}.1 table $TABLE
+      # Delete old tables if any in Monroe NS
+      ${MNS} ip ru del from ${IPRANGE}.2 lookup $TABLE priority 10000 2>/dev/null || true
+      ${MNS} ip ru del from all to ${IPRANGE}.2/24 lookup $TABLE priority 20000 2>/dev/null || true
+      ${MNS} ip ru del from all iif lo lookup $TABLE priority 91000 2>/dev/null || true
+      #Create new Tables
+      ${MNS} ip ru add from ${IPRANGE}.2 lookup $TABLE priority 10000
+      ${MNS} ip ru add from all to ${IPRANGE}.2/24 lookup $TABLE priority 20000
+      ${MNS} ip ru add from all iif lo lookup $TABLE priority 91000
+      echo "done"
+
+      echo -ne "\t\t* Create routing tables in Host for $IF (${IPRANGE}.1) -> "
+      # Routing IFBr to IF in host (using table allocator tables)
+      ip rule delete from $IPRANGE.1/24 2>/dev/null || true
+      ip rule add from $IPRANGE.1/24 table $TABLE priority 10000
+      echo "done"
+    fi
+  done
+  echo -n "FW Rules changed: "
+  if [ "$_UPDATE_FIREWALL_" -eq "1" ]; then
+    echo -n "yes, "
+    circle start
+  else
+   echo "no"
+  fi
+
+  if [ ${UPDATE_INTERFACES_MNS} -le 0 ];then
+    break
+  fi
+
+  sleep ${UPDATE_INTERFACES_MNS}
+done

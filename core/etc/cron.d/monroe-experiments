@@ -1,0 +1,6 @@
+# /etc/cron.d/monroe-experiments
+# sync monroe user experiments, ensure we have the latest base containers
+
+* * * * *   root  /usr/bin/monroe-sync-experiments
+27 */4 * * *  root  /usr/bin/pull-base-containers
+

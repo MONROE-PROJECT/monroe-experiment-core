@@ -1,0 +1,118 @@
+#!/bin/bash
+set -e
+
+# Default variables
+CHECK_STORAGE_QUOTA=0
+USERDIR="/experiments/user"
+USER_RSYNC_KEY="/etc/keys/repo.monroe-system.eu"
+USER_RSYNC_PORT="2280"
+USER_RSYNC_REPO=""
+USER_RSYNC_TODIR="/monroe-local-repo/experiments/"
+
+# Update above default variables if needed 
+. /etc/default/monroe-experiments
+
+export PATH=/usr/bin/:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+
+#TODO: File lock 
+DEVELOPMENT=$(cat /monroe/development/enabled 2>/dev/null|| echo 0)
+[ $DEVELOPMENT -eq 1 ] && exit 1
+
+_SSH="ssh -q -i $USER_RSYNC_KEY -p $USER_RSYNC_PORT -oStrictHostKeyChecking=no -o ConnectTimeout=30"
+_USER_RSYNC_PARMS="--no-motd -r -t -z --prune-empty-dirs --chmod=F644,D755"
+_USER_RSYNC="${_USER_RSYNC_PARMS} --stats --timeout=30"
+
+if [ ! -z "$USER_RSYNC_REPO" ];then
+  _USER_RSYNC_="${_USER_RSYNC} -e '${_SSH}'"
+  _TO_BASE_URL="$USER_RSYNC_REPO:$USER_RSYNC_TODIR"
+elif [ "$USER_RSYNC_TODIR" == "$USERDIR" ];then
+  echo "When saveing locally the USER_RSYNC_TODIR != USERDIR"
+  exit 1
+else
+ _TO_BASE_URL="$USER_RSYNC_TODIR"
+ mkdir -p $_TO_BASE_URL
+fi
+
+for SCHEDID in $(experiments -a); do
+  _EXPPATH=$USERDIR/$SCHEDID
+  echo "Retriving experiment logs"
+  CONTAINER_NAME=monroe-$SCHEDID
+  if [ ! -z "$(docker ps -a |grep $CONTAINER_NAME)" ]; then 
+    docker logs $CONTAINER_NAME 2>&1 > $_EXPPATH/container.log
+  fi
+  
+  # do not run rsync if a user experiment is running
+  experiments &>/dev/null && continue
+
+  # do not run rsync if already running from https://github.com/MONROE-PROJECT/Utilities/pull/22/files
+  _ME=$(basename "$0")
+  _RUNNING=$(ps h -C "$_ME" | grep -wv $$ | wc -l)
+  [[ $_RUNNING > 1 ]] && continue
+
+  if [ -f $_EXPPATH.stopped ]; then
+    _USER_RSYNC="${_USER_RSYNC} --remove-source-files"
+  fi
+  echo "Syncing $SCHEDID"
+  STATS=$(eval "rsync ${_USER_RSYNC} $_EXPPATH/ $_TO_BASE_URL/$SCHEDID")
+  SENT=$(echo "$STATS"|grep 'sent:'|sed -e 's/.*: //g')
+  RECV=$(echo "$STATS"|grep 'received:'|sed -e 's/.*: //g')
+  TOTAL=$((${SENT//,} + ${RECV//,}))
+
+  echo "$SENT sent, $RECV received, $TOTAL total."
+
+  if [ -f "$_EXPPATH.traffic" ]; then
+    TRAFFIC=$(cat $_EXPPATH.traffic)
+    RESULTS=$(echo $TRAFFIC | jq -r '.results // 0')
+    # skip on empty files and parsing errors
+    if [ $? -gt 0 ] || [ -z "$TRAFFIC" ]; then
+      logger -t monroe-user-experiments "Error parsing traffic report $SCHEDID ($TRAFFIC)";
+      continue;
+    fi
+
+    RESULTS=$(( $RESULTS + $TOTAL ))
+    UPDATE=$(echo $TRAFFIC | jq ".results=$RESULTS")
+    if [ ! -z "$UPDATE" ]; then
+      echo "$UPDATE" > $_EXPPATH.traffic
+    else
+      logger -t monroe-user-experiments "Error updating traffic report $SCHEDID from values ($TOTAL, $RESULTS, $UPDATE, $TRAFFIC)"
+    fi
+
+    if [ -f "$_EXPPATH.conf" ] && [ "$CHECK_STORAGE_QUOTA" == "1" ]; then 
+      QUOTA=$(cat $_EXPPATH.conf | jq -r '.storage // 0')
+
+      if [ "$RESULTS" -gt "$QUOTA" ]; then
+        PID=$(cat $_EXPPATH.pid) 
+        kill -9 $PID  # Should be more graceful maybe
+        echo "storage quota exceeded." >> $_EXPPATH/container.stat
+        echo "failed; storage quota exceeded" > $_EXPPATH.status
+      fi
+    fi
+  fi
+
+  if [[ -f $_EXPPATH.stopped && ( -z "$(ls -A $_EXPPATH)" ||  "$(ls -A $_EXPPATH)" == "lost+found") ]];then 
+      echo -n "All files synched, cleaning files... "
+      # any other file should be rsynced by now
+      # TODO: WHat if it is not mounted n the first place
+      umount $_EXPPATH
+      rmdir  $_EXPPATH
+
+      if (systemctl -q is-active marvind.service); then 
+        echo "Monroe Scheduler is running keep .traffic and .status"
+        # .traffic and .status should be kept (are deleted by external scripts after read)
+        mv     $_EXPPATH.traffic  $_EXPPATH-traffic
+        mv     $_EXPPATH.status  $_EXPPATH-status
+        rm -rf $_EXPPATH.*
+        mv     $_EXPPATH-traffic  $_EXPPATH.traffic_
+        #TODO : remove underscore
+        mv     $_EXPPATH-status  $_EXPPATH.status
+      else
+        echo "Monroe Scheduler is not running delete all files"
+        rm -rf $_EXPPATH.*
+      fi
+      echo "ok."
+  fi
+
+done
+
+mkdir -p $USERDIR
+touch $USERDIR/.keep

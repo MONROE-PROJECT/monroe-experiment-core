@@ -1,0 +1,50 @@
+# Variables in this file will override the default 
+
+# Shared Variables
+#USERDIR="/experiments/user"
+#CONTAINER_NAME=monroe-"$SCHEDID"
+#MNS="ip netns exec monroe"
+#NEAT_CONTAINER_NAME=monroe-neat-proxy
+#URL_NEAT_PROXY=monroe/neat-proxy
+#EXCLUDED_IF="Br|lo|metadata|wwan|ifb|docker"
+#OPINTERFACES="nlw_|wwan"
+#VETH_IPRANGE=172.18
+#MONROE_NAMESPACE_CONTAINER_NAME=monroe-namespace
+
+## Monroe Namespace
+#METADATA_IPRANGE=172.17.0   #172.17.0.1 -> 172.17.0.2
+#DNS_TEST_URL="www.monroe-system.eu"
+#UPDATE_INTERFACES_MNS=30  # > 0 
+#URL_NOOP="monroe/base:complete"
+#ADD_FW_ANTI_LOCKOUT_RULE=1
+
+## pull-base-containers
+#URL_BASE_EXPERIMENTS="monroe/base:complete"
+# Private repo (or login to docker hub)
+#DOCKER_USER=""
+#DOCKER_PASS=""
+#DOCKER_REPO=""
+
+## monroe-user-experiments
+#USER_RSYNC_KEY=""
+#USER_RSYNC_PORT="2280"
+#USER_RSYNC_REPO="rsync@repo.monroe-system.eu"
+#USER_RSYNC_TODIR="/experiments/user"
+
+## container-deploy.sh
+#ERROR_CONTAINER_NOT_FOUND=100
+#ERROR_INSUFFICIENT_DISK_SPACE=101
+#ERROR_QUOTA_EXCEEDED=102
+#ERROR_MAINTENANCE_MODE=103
+#ERROR_CONTAINER_DOWNLOADING=104
+#ERROR_EXPERIMENT_IN_PROGRESS=105
+
+## container-start.sh
+#NOERROR_CONTAINER_IS_RUNNING=0
+#ERROR_CONTAINER_DID_NOT_START=10
+#ERROR_NETWORK_CONTEXT_NOT_FOUND=11
+#ERROR_IMAGE_NOT_FOUND=12
+#ERROR_MAINTENANCE_MODE=13
+
+## container-stop.sh
+#USAGEDIR=/monroe/usage/netns

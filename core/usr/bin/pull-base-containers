@@ -1,0 +1,46 @@
+#!/bin/bash
+
+# Default variables
+URL_BASE_EXPERIMENTS="monroe/base:complete"
+DOCKER_USER=""
+DOCKER_PASS=""
+DOCKER_REPO=""
+
+export PATH=/usr/bin/:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+
+# Update above default variables if needed 
+. /etc/default/monroe-experiments
+
+# do not run if a user experiment is running
+experiments && exit 1
+
+# Cleanup old images
+for CONTAINER in $(docker ps -aq); do
+  IMAGEID=$(docker inspect --format '{{.Image}}' $CONTAINER)
+  if [ "$(docker inspect --format='{{.State.Running}}' $CONTAINER)" == "false" ]; then
+    # remove stale containers, unless they are user experiments
+    if [[ ! "$(docker inspect --format '{{.Config.Image}}' $CONTAINER)" == "monroe-"* ]]; then
+      docker rm $CONTAINER || true
+    fi
+  else
+    # stop and remove running containers, if their images have been untagged (updated)
+    if [[ "$(docker inspect --format '{{.RepoTags}}' $IMAGEID)" == "[]" ]]; then
+      docker stop -t 0 $CONTAINER || true
+      docker rmi -f $IMAGEID || true
+    fi;
+  fi;
+done
+
+# pull base experiments and retag them as base-$URL
+if [ ! -z "$DOCKER_USER" ] && [ ! -z "$DOCKER_PASS" ]; then
+  echo "Logging in to docke repo ($DOCKER_REPO)"
+  docker login -u $DOCKER_USER -p $DOCKER_PASS $DOCKER_REPO
+fi
+for i in $URL_BASE_EXPERIMENTS; do
+  docker pull $i
+  docker tag $i base-$i
+  docker rmi $i
+done
+
+# clean stale images
+docker rmi $(docker images -a|grep '<none>'|awk "{print \$3}") 2>/dev/null || true

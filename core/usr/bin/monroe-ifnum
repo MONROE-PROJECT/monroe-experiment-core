@@ -1,0 +1,24 @@
+#!/bin/bash
+set -e
+
+# generate a unique static IP for each interface name metadata is .0.1
+# $1 - interface name (e.g wwan0)
+# $2 - IP range to map to (e.g 172.18)
+
+IF=$1
+VETH_IPRANGE=$2
+
+# TODO: This should maybe be under /var/run ?
+_DB_FILE_=/tmp/monroe-ifnum.db
+
+if [ ! -f $_DB_FILE_ ];then
+  touch $_DB_FILE_
+fi
+
+NUM=$(grep "$IF:" $_DB_FILE_ | cut -f2 -d":")
+if [ -z "$NUM" ];then
+  NUM=$(wc -l $_DB_FILE_ | cut -f1 -d' ')
+  echo "$IF:$NUM" >> $_DB_FILE_
+fi
+
+echo "$VETH_IPRANGE.$NUM"

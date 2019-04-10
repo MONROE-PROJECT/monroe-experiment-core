@@ -1,0 +1,6 @@
+#!/bin/sh
+
+# TODO: Remove monroe-experiments containers, images and files?
+
+systemctl stop monroe-namespace
+systemctl disable monroe-namespace
