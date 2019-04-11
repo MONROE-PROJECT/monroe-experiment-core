@@ -15,13 +15,14 @@ The rationale behind this repo/package is to allow monroe (with minimal dependen
 ### Run a experiment and check so it works
 1. create a test.conf in /experimenst/user/
 2. execute ```container-deploy.sh test``` # check so all files/mounts has happened
-3. execute ```container-start.sh test``` # check if soime out put was produced
-4. execute ```monroe-sync-experiments``` # check so it a container.log was produced and that files are synched)
+3. execute ```container-start.sh test``` # check if some output was produced
+4. execute ```monroe-sync-experiments``` # check so a container.log was produced and that files are synched
 5. execute ```container-stop.sh test``` # checks so the .stopped file was produced
-6. execute ```monroe-sync-experiments``` # and see that all fiels are synched and that the experiement is cleanued up.
+6. execute ```monroe-sync-experiments``` # check that all files are synched and that the experiement is cleanued up.
 
 # TODO (both near time and moonshots)
 * See what is requried to make it install on Ubuntu 18.04 LTS (do we depend on ifupdown anywhere in the code)
 * Remove/rework dependency on circle and table-allocator (ie make optional or remove binary components)
 * Create a full plugin system with hooks into the main scripts (container-deploy/start/stop)
 * Re-integerate current functionality as plugins (vm and neat support)
+* Rework the experiment state checking code (ie stopped/running/deployed etc) to make it more robust
