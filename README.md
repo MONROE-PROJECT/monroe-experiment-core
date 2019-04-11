@@ -1,6 +1,6 @@
 # monroe-experiment-core
 Experimental MONROE as a package (MaaP).
-This is currently the Monore DEV branch.
+This is currently the Monroe DEV branch.
  
 ## Rationale 
 The rationale behind this repo/package is to allow monroe (with minimal dependencys) to be installed on a fresh Debian installation.
@@ -19,3 +19,9 @@ The rationale behind this repo/package is to allow monroe (with minimal dependen
 4. execute ```monroe-sync-experiments``` # check so it a container.log was produced and that files are synched)
 5. execute ```container-stop.sh test``` # checks so the .stopped file was produced
 6. execute ```monroe-sync-experiments``` # and see that all fiels are synched and that the experiement is cleanued up.
+
+# TODO (both near time and moonshots)
+* See what is requried to make it install on Ubuntu 18.04 LTS (do we depend on ifupdown anywhere in the code)
+* Remove/rework dependency on circle and table-allocator (ie make optional or remove binary components)
+* Create a full plugin system with hooks into the main scripts (container-deploy/start/stop)
+* Re-integerate current functionality as plugins (vm and neat support)
