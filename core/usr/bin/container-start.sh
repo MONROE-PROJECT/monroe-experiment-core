@@ -10,6 +10,7 @@ CONTAINER_NAME=monroe-$SCHEDID
 NEAT_CONTAINER_NAME=monroe-neat-proxy
 EXCLUDED_IF="Br|lo|metadata|wwan|ifb|docker"
 OPINTERFACES="nlw_"
+UNWANTED_TASKS_AT_EXPERIMENT_START=("docker pull" "rsync" "ansible" "ansible-wrapper" "apt" "scp")
 
 URL_NEAT_PROXY=monroe/neat-proxy
 NOERROR_CONTAINER_IS_RUNNING=0
@@ -170,7 +171,12 @@ if [ "$_UPDATE_FIREWALL_" -eq "1" ];then
   circle start
 fi
 
-
+### Stop tasks that can influence experiment results #####################
+echo "Stopping unwanted tasks/processes before starting experiment..."
+for task in "${UNWANTED_TASKS_AT_EXPERIMENT_START[@]}"; do
+   echo -n "$task: "
+   pkill -9 -f "$task" && echo "stopped" || echo "not running"
+done
 ### START THE CONTAINER/VM ###############################################
 
 echo -n "Starting container... "
