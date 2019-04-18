@@ -88,8 +88,7 @@ for SCHEDID in $(experiments -a); do
       fi
     fi
   fi
-
-  if [[ -f $_EXPPATH.stopped && ( -z "$(ls -A $_EXPPATH)" ||  "$(ls -A $_EXPPATH)" == "lost+found") ]];then 
+  if [[ -f $_EXPPATH.stopped && -z "$(find $_EXPPATH -type f -print -quit)" ]];then 
       echo -n "All files synched, cleaning files... "
       # any other file should be rsynced by now
       # TODO: WHat if it is not mounted n the first place
