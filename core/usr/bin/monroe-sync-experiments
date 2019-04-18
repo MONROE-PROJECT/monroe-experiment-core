@@ -37,7 +37,7 @@ for SCHEDID in $(experiments -a); do
   _EXPPATH=$USERDIR/$SCHEDID
   echo "Retriving experiment logs"
   CONTAINER_NAME=monroe-$SCHEDID
-  if [ ! -z "$(docker ps -a |grep $CONTAINER_NAME)" ]; then 
+  if [ ! -z "$(docker ps -a |grep -w $CONTAINER_NAME)" ]; then 
     docker logs $CONTAINER_NAME 2>&1 > $_EXPPATH/container.log
   fi
   
