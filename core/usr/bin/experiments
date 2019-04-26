@@ -1,5 +1,5 @@
 #!/bin/bash
-#set -e
+#set -x
 
 # Default variables
 USERDIR="/experiments/user"
@@ -17,7 +17,7 @@ for f in $USERDIR/*; do
         ALL_SCHEDULED_EXPERIMENTS="$ALL_SCHEDULED_EXPERIMENTS $SCHEDID"
 
         PID=$(cat $USERDIR/$SCHEDID.pid 2> /dev/null)
-        if [ -d "/proc/$PID" ]
+        if [ ! -z "$PID" ] && [ -d "/proc/$PID" ]
         then
                 # We have a live process, try to do basic insanity check so it is a docker or qemu
                 CMDLINE="$(cat /proc/$PID/cmdline 2>/dev/null  | tr '\0' '\n')"
