@@ -1,0 +1,15 @@
+[Install]
+WantedBy=multi-user.target
+
+[Unit]
+Description=Monroe TAP Agent
+After=network.target docker.service monroe-namespace.service
+
+[Service]
+ExecStart=/opt/monroe/tap-agent/monroe-tap-agent
+
+Type=simple
+Restart=on-failure
+
+StandardError=null
+StandardOutput=null

@@ -1,0 +1,4 @@
+#!/bin/sh
+
+systemctl stop monroe-tap-agent 
+systemctl disable monroe-tap-agent

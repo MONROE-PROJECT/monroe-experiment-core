@@ -1,0 +1,43 @@
+#!/bin/bash
+
+# Author: Jonas Karlsson <jonas.karlsson@kau.se>
+# Date: April 2019
+# License: GNU General Public License v3
+
+# This wrapper is a trick to load bash variables into python
+
+# Clear all environment variables 
+env -i
+# Export all envirnment (needed for python) -a
+# Fail if something goes pearshaped -e 
+set -ae
+
+# These are the default values for container-deploy.sh
+ERROR_CONTAINER_NOT_FOUND=100
+ERROR_INSUFFICIENT_DISK_SPACE=101
+ERROR_QUOTA_EXCEEDED=102
+ERROR_MAINTENANCE_MODE=103
+ERROR_CONTAINER_DOWNLOADING=104
+ERROR_EXPERIMENT_IN_PROGRESS=105
+
+# These are the default values for container-start.sh
+NOERROR_CONTAINER_IS_RUNNING=0
+ERROR_CONTAINER_DID_NOT_START=10
+ERROR_NETWORK_CONTEXT_NOT_FOUND=11
+ERROR_IMAGE_NOT_FOUND=12
+ERROR_MAINTENANCE_MODE=13
+
+# These are the default values for monroe-sync-experiments
+USER_RSYNC_TODIR="/monroe-local-repo/experiments/"
+USERDIR="/experiments/user"
+USER_RSYNC_KEY="/etc/keys/repo.monroe-system.eu"
+USER_RSYNC_PORT="2280"
+USER_RSYNC_REPO=""
+
+# Load all configured variables (if any)
+if [ -f "/etc/default/monroe-experiments" ]; then  
+    . /etc/default/monroe-experiments
+fi
+set +a
+
+/usr/bin/python3 /opt/monroe/tap-agent/agent.py

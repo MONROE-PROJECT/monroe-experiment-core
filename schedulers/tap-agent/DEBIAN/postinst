@@ -1,0 +1,4 @@
+#!/bin/sh
+
+systemctl enable monroe-tap-agent || true
+systemctl start  monroe-tap-agent || true
