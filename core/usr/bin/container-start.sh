@@ -175,8 +175,18 @@ fi
 echo "Stopping unwanted tasks/processes before starting experiment..."
 for task in "${UNWANTED_TASKS_AT_EXPERIMENT_START[@]}"; do
    echo -n "$task: "
-   pkill -9 -f "$task" && echo "stopped" || echo "not running"
+   _PIDS=$(pgrep -f "$task")
+   if [ -z "$_PIDS" ]; then
+        echo -n "not running"
+   else
+        echo -n "killing :"
+   fi
+   for _pid in $_PIDS; do
+        /sbin/start-stop-daemon --stop --signal TERM --retry 30 --oknodo --pid $_pid && echo -n " $_pid"
+   done
+   echo ""
 done
+
 ### START THE CONTAINER/VM ###############################################
 
 echo -n "Starting container... "
