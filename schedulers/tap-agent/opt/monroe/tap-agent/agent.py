@@ -11,14 +11,16 @@ from zipfile import ZipFile
 from os.path import basename
 import re, os, json
 
-_TAP_AGENT_PORT = 8080
 _DEBUG = False
-_LISTEN_ADDRESS = "0.0.0.0"
 
 _EXPERIMENT_PATH = os.environ.get("USERDIR")
 _SYNC_PATH = os.environ.get("USER_RSYNC_TODIR")
 _SYNC_REPO = os.environ.get("USER_RSYNC_REPO", "")
-
+_LISTEN_ADDRESS = os.environ.get("TAP_AGENT_LISTEN_ADDRESS", "0.0.0.0")
+_TAP_AGENT_PORT = int(os.environ.get("TAP_AGENT_PORT", "8080"))
+_SSL_CERT = os.environ.get("TAP_AGENT_CERT")
+_SSL_KEY = os.environ.get("TAP_AGENT_KEY")
+_API_KEY = os.environ.get("TAP_AGENT_API_KEY", "$3cr3t_Pa$$w0rd!")
 
 #Read errocodes for container-start and container-deploy and reverse order
 _ERRORCODE_MAPPPING = {}
@@ -39,6 +41,12 @@ def set_experiment(action, schedid):
         error=_ERRORCODE_MAPPPING.get(e.returncode, f"Unknown error {e}")
         abort_with_response(f"Could not {action} experiment {schedid}, {error}",status.HTTP_500_INTERNAL_SERVER_ERROR)
 
+def check_api_key(headers):
+    auth = headers.get("X-Api-Key")
+    if auth != _API_KEY:
+        abort_with_response(f"ERROR Unauthorized",status.HTTP_401_UNAUTHORIZED)
+    return True
+
 def get_experiments(only_running = False):
     retur = ""
     try:
@@ -58,6 +66,7 @@ def abort_with_response(message, status):
 ## Deploy ################################################################################ 
 @app.route('/api/v1.0/experiment/<string:schedid>', methods=['POST'])
 def deploy_experiment(schedid):
+    check_api_key(request.headers)
     # We did not send a json or no script tag
     print(f"Trying to deploy {schedid}")
     if not request.json or not 'script' in request.json:
@@ -92,6 +101,7 @@ def deploy_experiment(schedid):
 ## Start ###############################################################################
 @app.route('/api/v1.0/experiment/<string:schedid>', methods=['PUT'])
 def start_experiment(schedid):
+    check_api_key(request.headers)
     running=get_experiments(only_running=True)
     #Maybe not necessary 
     if running:
@@ -109,6 +119,7 @@ def start_experiment(schedid):
 ## Stop ################################################################################
 @app.route('/api/v1.0/experiment/<string:schedid>', methods=['DELETE'])
 def stop_experiment(schedid):
+    check_api_key(request.headers)
     experiment = os.path.normpath(("{}/{}").format(_EXPERIMENT_PATH, schedid))
     
     # Maybe not necessary 
@@ -151,6 +162,8 @@ def get_experiment_status_all():
 ## Get results############################################################################
 @app.route('/api/v1.0/experiment/<string:schedid>/results', strict_slashes=False, methods=['GET'])
 def get_experiment_results(schedid):
+    check_api_key(request.headers)
+
     experiment_syncfolder = os.path.normpath(("{}/{}").format(_SYNC_PATH, schedid))
     # TODO : Use temporary directory/filename 
     result_zip='/tmp/results_{}.zip'.format(schedid)
@@ -200,4 +213,11 @@ def stop_get_experiment(schedid):
 
 
 if __name__ == '__main__':
-    app.run(host=_LISTEN_ADDRESS, debug=_DEBUG,port=_TAP_AGENT_PORT)
+    if _SSL_CERT and _SSL_KEY:
+        print(f"Using cert : {_SSL_CERT} with key : {_SSL_KEY}")
+        _SSL_CONTEXT=(_SSL_CERT, _SSL_KEY)
+    else:
+        print("Using ad hoc mode")
+        _SSL_CONTEXT='adhoc'
+    
+    app.run(ssl_context=_SSL_CONTEXT, host=_LISTEN_ADDRESS, debug=_DEBUG,port=_TAP_AGENT_PORT)

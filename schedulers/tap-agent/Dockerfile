@@ -1,6 +1,6 @@
 # Author: Jonas Karlsson <jonas.karlsson@kau.se>
 # Date: April 2019
-# License: GNU General Public License v3
+# License: GNU General Public License v3 
 
 FROM debian:stretch
 MAINTAINER jonas.Karlsson@kau.se

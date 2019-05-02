@@ -2,7 +2,7 @@
 
 # Author: Jonas Karlsson <jonas.karlsson@kau.se>
 # Date: April 2019
-# License: GNU General Public License v3
+# License: GNU General Public License v3 
 
 # This wrapper is a trick to load bash variables into python
 
@@ -33,6 +33,13 @@ USERDIR="/experiments/user"
 USER_RSYNC_KEY="/etc/keys/repo.monroe-system.eu"
 USER_RSYNC_PORT="2280"
 USER_RSYNC_REPO=""
+
+# TAP_AGENT DEFUALTS 
+TAP_AGENT_LISTEN_ADDRESS="0.0.0.0"
+TAP_AGENT_PORT="8080"
+TAP_AGENT_CERT=""
+TAP_AGENT_KEY=""
+TAP_AGENT_API_KEY='$3cr3t_Pa$$w0rd!'
 
 # Load all configured variables (if any)
 if [ -f "/etc/default/monroe-experiments" ]; then  
