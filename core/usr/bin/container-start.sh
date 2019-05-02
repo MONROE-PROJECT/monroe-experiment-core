@@ -175,7 +175,7 @@ fi
 echo "Stopping unwanted tasks/processes before starting experiment..."
 for task in "${UNWANTED_TASKS_AT_EXPERIMENT_START[@]}"; do
    echo -n "$task: "
-   _PIDS=$(pgrep -f "$task")
+   _PIDS=$(pgrep -f "$task" || true)
    if [ -z "$_PIDS" ]; then
         echo -n "not running"
    else
