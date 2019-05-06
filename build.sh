@@ -4,13 +4,22 @@ function abspath {
     echo $(cd "$1" && pwd)
 }
 
-build_container=$RANDOM
-
 srcdir=$(abspath "$1")
 outdir=$(abspath "$2")
+
+if [[ -x "$srcdir/build.sh" && "$PWD" != "$srcdir" ]]
+then
+    echo "We have a local build file for this component use that"
+    cd $srcdir
+    ./build.sh $srcdir $outdir
+    exit $?
+fi
+
+echo "Using global build file to build $(basename $srcdir)"
+build_container=$RANDOM
 ignore_files="Dockerfile *.deb build.sh"
 
-echo "Building the build container"
+echo "Building the global build container"
 docker pull debian:stretch >/dev/null
 docker build --rm -t $build_container  . >/dev/null && echo "Finished building $build_container" 
 
@@ -23,5 +32,5 @@ echo "Destination = $outdir"
 echo "Ignoring these files = $ignore_files"
 docker run --rm -e IGNORE_FILES="$ignore_files" $docker_args $build_container bash -c "/build.sh"
 
-echo "Deleteing temporarty build container : $build_container"
+echo "Deleting temporarty build container : $build_container"
 docker rmi --force $CONTAINER &>/dev/null

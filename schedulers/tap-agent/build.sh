@@ -14,7 +14,7 @@ srcdir=$(abspath "$1")
 outdir=$(abspath "$2")
 ignore_files="Dockerfile *.deb build.sh"
 
-echo "Building the build container"
+echo "Building the build container for $(basename $srcdir)"
 docker pull debian:stretch >/dev/null
 docker build --rm -t $build_container  . >/dev/null && echo "Finished building $build_container" 
 
