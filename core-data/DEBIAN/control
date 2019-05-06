@@ -1,0 +1,10 @@
+Package: monroe-experiment-core-data
+Version: 243683dd5ffb8519b6480bddde1162331ac1a707ef5a501f3cbd08b4e353abad
+Section: devel
+Priority: optional
+Architecture: amd64
+Maintainer: Jonas Karlsson <jonas.karlsson@kau.se>
+Depends: docker-ce (>=5:18)
+Vcs-Browser: https://github.com/MONROE-PROJECT/monroe-experiment-core
+Vcs-Git: https://github.com/MONROE-PROJECT/monroe-experiment-core.git
+Description: Contains offline data to run MONROE experiments
