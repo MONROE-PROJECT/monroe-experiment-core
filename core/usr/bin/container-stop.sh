@@ -163,14 +163,6 @@ else
 fi
 echo "ok."
 
-#TODO: SHould this be here or in pull-base-containers et al.
-echo -n "Cleaning unused container images... "
-# remove all stopped containers (remove all, ignore errors when running)
-#TODO : Remove only monroe containers
-docker rm $(docker ps -aq) 2>/dev/null
-# clean any untagged containers without dependencies (unused layers)
-docker rmi $(docker images -a|grep '^<none>'|awk "{print \$3}") 2>/dev/null
-echo "ok."
 
 ##WEBGUI status codes 
 if [ -z "$STATUS" ]; then
