@@ -25,7 +25,7 @@ The rationale behind this repo/package is to allow monroe (with minimal dependen
 * ```apt install ./circle_1.1.2-deb8u3_all.deb ./table-allocator-client_0.1.2-deb8u-20170831x1107-65b66b_amd64.deb ./table-allocator-server_0.1.2-deb8u-20170831x1107-65b66b_amd64.deb jq ssh libuv1 libjson-c3 libjq1 libonig4 dnsutils ./monroe-experiment-core_*_amd64.deb```
 ### 4. Install scheduler
 Needed if want to schedule (ie run/control) experiments from a external station. 
-For a publically available node the API needs to be changed!
+For a publically available node the API key needs to be changed!
 #### 4.1 Install TAP/Rest API scheduler from apt-repo
 * ```apt install monroe-tap-agent```
 
