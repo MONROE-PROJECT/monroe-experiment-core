@@ -17,6 +17,7 @@ The rationale behind this repo/package is to allow monroe (with minimal dependen
 * ```curl -fsSL https://get.docker.com -o get-docker.sh && sh get-docker.sh```
 ### 3. Install monroe-experiment-core
 #### 3.1 Install monroe-experiment-core from apt-repo (default) 
+* ```apt install apt-transport-https curl```
 * ```echo 'deb [trusted=yes] https://raw.githubusercontent.com/MONROE-PROJECT/apt-repo/master stretch main' > /etc/apt/sources.list.d/monroe.list```
 * ```apt update && apt install jq ssh libuv1 libjson-c3 libjq1 libonig4 dnsutils circle table-allocator-* monroe-experiment-core```
 #### 3.2 Install monroe-experiment-core from self built packages 
