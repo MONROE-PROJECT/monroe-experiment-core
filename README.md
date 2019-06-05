@@ -11,12 +11,19 @@ The rationale behind this repo/package is to allow monroe (with minimal dependen
 3. ./build.sh core 
 
 
-## Howto install
-1. Install a fresh debian stretch (with defaults) 
-2. Install docker: ```curl -fsSL https://get.docker.com -o get-docker.sh && sh get-docker.sh```
-3. Install monroe-experiment-core  
-    1. Get circle and table-allocator-* deb packages (build or get from a running monroe node)
-    2. ```apt install ./circle_1.1.2-deb8u3_all.deb ./table-allocator-client_0.1.2-deb8u-20170831x1107-65b66b_amd64.deb ./table-allocator-server_0.1.2-deb8u-20170831x1107-65b66b_amd64.deb jq ssh libuv1 libjson-c3 libjq1 libonig4 dnsutils ./monroe-experiment-core_*_amd64.deb```
+## How to install
+### 1. Install a fresh debian stretch (with defaults) 
+### 2. Install docker: ```curl -fsSL https://get.docker.com -o get-docker.sh && sh get-docker.sh```
+### 3. Install monroe-experiment-core (see below for options)
+#### 3.1 Install monroe-experiment-core from apt-repo (default) 
+1. ```echo 'deb [trusted=yes] https://raw.githubusercontent.com/MONROE-PROJECT/apt-repo/master stretch main' > /etc/apt/sources.list.d/monroe.list```
+2. ```apt update && apt install jq ssh libuv1 libjson-c3 libjq1 libonig4 dnsutils circle table-allocator-* monroe-experiment-core```
+#### 3.2 Install monroe-experiment-core from self built packages 
+1. Get circle and table-allocator-* deb packages (build or get from a running monroe node)
+2. ```apt install ./circle_1.1.2-deb8u3_all.deb ./table-allocator-client_0.1.2-deb8u-20170831x1107-65b66b_amd64.deb ./table-allocator-server_0.1.2-deb8u-20170831x1107-65b66b_amd64.deb jq ssh libuv1 libjson-c3 libjq1 libonig4 dnsutils ./monroe-experiment-core_*_amd64.deb```
+### 4. Install scheduler (see below for options)
+#### 4.1 Install TAP/Rest API scheduler
+```apt install monroe-tap-agent```
 
 ### Run a experiment and check so it works
 1. create a test.conf in /experimenst/user/
