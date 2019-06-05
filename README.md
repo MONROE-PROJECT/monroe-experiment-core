@@ -16,11 +16,10 @@ The rationale behind this repo/package is to allow monroe (with minimal dependen
 ### 2. Install docker
 * ```curl -fsSL https://get.docker.com -o get-docker.sh && sh get-docker.sh```
 ### 3. Install monroe-experiment-core
-#### 3.1 Install monroe-experiment-core from apt-repo (default)
+#### 3.1 Install monroe-experiment-core from [apt-repo](https://github.com/MONROE-PROJECT/apt-repo/blob/master/README.md) (default)
 * ```apt install apt-transport-https curl```
 * ```echo 'deb [trusted=yes] https://raw.githubusercontent.com/MONROE-PROJECT/apt-repo/master stretch main' > /etc/apt/sources.list.d/monroe.list```
 * ```apt update && apt install jq ssh libuv1 libjson-c3 libjq1 libonig4 dnsutils circle table-allocator-* monroe-experiment-core```
-See: https://github.com/MONROE-PROJECT/apt-repo/blob/master/README.md for details
 #### 3.2 Install monroe-experiment-core from self built packages 
 * Get circle and table-allocator-* deb packages (build or get from a running monroe node)
 * ```apt install ./circle_1.1.2-deb8u3_all.deb ./table-allocator-client_0.1.2-deb8u-20170831x1107-65b66b_amd64.deb ./table-allocator-server_0.1.2-deb8u-20170831x1107-65b66b_amd64.deb jq ssh libuv1 libjson-c3 libjq1 libonig4 dnsutils ./monroe-experiment-core_*_amd64.deb```
