@@ -28,7 +28,8 @@ Needed if want to schedule (ie run/control) experiments from a external station.
 For a publically available node the API key needs to be changed!
 #### 4.1 Install TAP/Rest API scheduler from apt-repo
 * ```apt install monroe-tap-agent```
-#### 4.2 Install TAP/Rest API scheduler from [source](https://github.com/MONROE-PROJECT/monroe-experiment-core/blob/master/schedulers/tap-agent/README.md)
+#### 4.2 Install TAP/Rest API scheduler from [source](https://github.com/MONROE-PROJECT/monroe-experiment-core/blob/master/schedulers/tap-agent/)
+* See: https://github.com/MONROE-PROJECT/monroe-experiment-core/blob/master/schedulers/tap-agent/README.md
 
 ## Run a experiment and check so it works
 1. create a test.conf in /experimenst/user/
