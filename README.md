@@ -26,7 +26,7 @@ The rationale behind this repo/package is to allow monroe (with minimal dependen
 #### 4.1 Install TAP/Rest API scheduler
 * ```apt install monroe-tap-agent```
 
-### Run a experiment and check so it works
+## Run a experiment and check so it works
 1. create a test.conf in /experimenst/user/
 2. execute ```container-deploy.sh test``` # check so all files/mounts has happened
 3. execute ```container-start.sh test``` # check if some output was produced
@@ -34,7 +34,7 @@ The rationale behind this repo/package is to allow monroe (with minimal dependen
 5. execute ```container-stop.sh test``` # checks so the .stopped file was produced
 6. execute ```monroe-sync-experiments``` # check that all files are synched and that the experiement is cleanued up.
 
-# TODO (both near time and moonshots)
+## TODO (both near time and moonshots)
 * See what is requried to make it install on Ubuntu 18.04 LTS (do we depend on ifupdown anywhere in the code)
 * Remove/rework dependency on circle and table-allocator (ie make optional or remove binary components)
 * Create a full plugin system with hooks into the main scripts (container-deploy/start/stop)
