@@ -83,6 +83,7 @@ for SCHEDID in $(experiments -a); do
       if [ "$RESULTS" -gt "$QUOTA" ]; then
         PID=$(cat $_EXPPATH.pid) 
         kill -9 $PID  # Should be more graceful maybe
+        #TODO : CAll container-stop here?
         echo "storage quota exceeded." >> $_EXPPATH/container.stat
         echo "failed; storage quota exceeded" > $_EXPPATH.status
       fi
@@ -91,7 +92,7 @@ for SCHEDID in $(experiments -a); do
   if [[ -f $_EXPPATH.stopped && -z "$(find $_EXPPATH -type f -print -quit)" ]];then 
       echo -n "All files synched, cleaning files... "
       # any other file should be rsynced by now
-      # TODO: WHat if it is not mounted n the first place
+      # TODO: WHat if it is not mounted in the first place
       umount $_EXPPATH
       rmdir  $_EXPPATH
 
