@@ -1,10 +1,9 @@
-Package: monroe-tap-agent
-Version: 0.1.2
+Package: monroe-tap-agent-rela
+Version: 1.0.0
 Section: devel
 Priority: optional
 Architecture: amd64
 Depends: python3-flask (>=0.12.1-1), monroe-experiment-core (>=0.2.0), python3-flask-api (>=0.6.4), openssl (>=1.1)
 Installed-Size: 73
 Maintainer: Jonas Karlsson <jonas.karlsson@kau.se>
-Description: Installs a TAP agent to control and exectue experiments on a monroe node.
-
+Description: Installs a TAP agent to control and execute experiments on a monroe node.

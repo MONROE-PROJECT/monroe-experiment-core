@@ -1,5 +1,5 @@
-Package: monroe-experiment-core
-Version: 0.9.1
+Package: monroe-experiment-core-rela
+Version: 1.0.0
 Section: devel
 Priority: optional
 Architecture: amd64
