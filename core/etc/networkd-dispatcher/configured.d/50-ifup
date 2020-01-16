@@ -1,0 +1,63 @@
+#!/bin/bash -x
+set -x
+exec 1>/tmp/ifupp
+
+# Redirect standard error to standard out such that 
+# standard error ends up going to wherever standard
+# out goes (the file).
+exec 2>&1
+
+DNSMASQ_SERVER_PATH="/tmp/dnsmasq-servers.conf"
+
+printenv
+
+
+
+if [ "$AdministrativeState" != "configured" ];
+then
+    exit 0;
+fi
+
+IF_ADDRESS=$IP_ADDRS
+IF_NETMASK=$(ip addr show dev $IFACE | grep $IF_ADDRESS | cut -d'/' -f2 | cut -d' ' -f1)
+IF_NETMASK_UGLY=$(ipcalc $IF_ADDRESS/$IF_NETMASK | grep Netmask | tr -d " " | cut -d':' -f2 | cut -d'=' -f1)
+IF_GATEWAY=$(echo $json | jq -r .Gateway[] | cut -d' ' -f1)
+IF_DNS=$(echo $json | jq -r .DNS[])
+
+#get route
+rt_table=$(/usr/sbin/table_allocator_client -4 -s -a "$IF_ADDRESS" -n "$IF_NETMASK_UGLY" -i "$IFACE" -d tas_socket)
+
+if [ "$rt_table" -eq 0 ];
+then
+    rt_table=254;
+    if_metric=$(/sbin/ip link show dev "$IFACE" | head -1 | cut -d " " -f 1 | cut -d ":" -f 1)
+fi
+
+#This is not the nicest way in the world to extract network number, look into
+#bash bitwise operators when time
+network_number=$(ipcalc "$IF_ADDRESS"/"$IF_NETMASK" | grep "^Network" | tr -d " " | cut -d ":" -f 2 | cut -d "/" -f 1)
+
+#we are run from up, static configuration is already applied
+
+#move the address route created by default
+ip -4 ro delete ${network_number}${IF_NETMASK:+/$IF_NETMASK} dev ${IFACE}
+ip -4 ro add ${network_number}${IF_NETMASK:+/$IF_NETMASK} dev ${IFACE} \
+    src ${IF_ADDRESS} table ${rt_table} ${if_metric:+metric $if_metric}
+
+#move default route to table
+ip -4 ro delete default via ${IF_GATEWAY} dev ${IFACE}
+ip -4 ro add default via ${IF_GATEWAY} dev ${IFACE} src ${IF_ADDRESS} \
+    table ${rt_table} ${if_metric:+metric $if_metric}
+
+for nameserver in $IF_DNS; do
+	server_str="server=$nameserver@$IF_ADDRESS@$IFACE"
+
+        grep "$server_str" "$DNSMASQ_SERVER_PATH" 2>/dev/null
+
+        if [ $? -ne 0 ]; then
+            echo "$server_str" >> "$DNSMASQ_SERVER_PATH"
+        fi
+done
+kill -s HUP $(pgrep dnsmasq)
+
+exit 0
