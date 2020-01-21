@@ -5,8 +5,15 @@ set -e
 systemctl restart docker
 
 #Renews ip on alla interfaces (check so it actuall works on multiple interfaces) https://bit.ly/2G1z7Ib
-dhclient -r && dhclient || true
-netplan apply || true
+# Only restart if it is already running
+if systemctl status systemd-networkd
+then
+    systemctl restart systemd-networkd || true
+elif pidof dhclient
+then
+    dhclient -r && dhclient || true
+fi
+#TODO : write message to inform that network suybsystem need to be restarted
 
 mkdir -p /experiments/user
 systemctl enable monroe-namespace
