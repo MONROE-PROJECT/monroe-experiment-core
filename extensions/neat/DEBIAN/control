@@ -1,0 +1,10 @@
+Package: monroe-extension-neat
+Version: 0.0.1
+Section: devel
+Priority: optional
+Architecture: amd64
+Maintainer: Jonas Karlsson <jonas.karlsson@kau.se>
+Depends: monroe-experiment-core (>=0.2.0)
+Vcs-Browser: https://github.com/MONROE-PROJECT/monroe-experiment-core
+Vcs-Git: https://github.com/MONROE-PROJECT/monroe-experiment-core.git
+Description: Enables MONROE experiments to tunnel TCP traffic through NEAT

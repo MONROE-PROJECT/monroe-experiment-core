@@ -1,0 +1,48 @@
+#!/bin/bash
+set -e
+
+NEAT_PROXY_PATH=$1
+URL_NEAT_PROXY=monroe/neat-proxy
+EXCLUDED_IF="Br|lo|metadata|wwan|ifb|docker"
+VETH_IPRANGE=172.18
+
+# Update default variables if needed
+. /etc/default/monroe-experiments
+
+INTERFACES="$(ls /sys/class/net/|egrep -v $EXCLUDED_IF)" || true
+# If proxy is enabled, then configure TPROXY iptables rules
+# to divert TCP traffic via the proxy on all available interfaces
+### Start the NEAT DOCKER proxy ######################################
+CID_PROXY=$(docker ps --no-trunc | grep $URL_NEAT_PROXY | awk '{print $1}' | head -n 1)
+echo "NEAT: neat-proxy enabled ... "
+echo -n "NEAT: neat-proxy container: ${CID_PROXY}"
+
+# Configure and start neat-proxy container if not running
+if [ -z "$CID_PROXY" ]; then
+    ip rule del fwmark 1 lookup 100 || true
+    ip rule add fwmark 1 lookup 100 || true
+    ip route flush table 100 || true
+    ip route add local 0.0.0.0/0 dev lo table 100
+    mkdir -p $NEAT_PROXY_PATH
+    mkdir -p /var/run/neat/
+    docker run -d --net=host \
+               -v $NEAT_PROXY_PATH:/monroe/results \
+           -v /var/run/neat:/var/run/neat \
+            --name monroe-neat-proxy \
+               $URL_NEAT_PROXY || true;
+    echo "is started"
+fi
+
+for IF in $INTERFACES; do
+  # Firewall rules to set up TPROXY
+  TARGET="/etc/circle.d/60-$IF-neat-proxy.rules"
+  if [ ! -f ${TARGET} ]; then
+    IPRANGE=$(/usr/bin/monroe-ifnum $IF $VETH_IPRANGE)
+    RULES="\
+\${ipt4} -A INPUT -p tcp -s ${IPRANGE}.0/24 -d localhost -j DROP
+\${ipt4} -A INPUT -p tcp -s ${IPRANGE}.0/24 -j ACCEPT
+\${ipt4} -t mangle -A PREROUTING -p tcp -i ${IF}Br -j TPROXY --tproxy-mark 0x1/0x1 --on-port 9876"
+    echo "$RULES" > $TARGET
+    echo "enabled neat-proxy on ${IF}"
+  fi
+done
