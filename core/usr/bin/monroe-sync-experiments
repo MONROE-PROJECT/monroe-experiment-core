@@ -92,8 +92,8 @@ for SCHEDID in $(experiments -a); do
       echo -n "All files synched, will delete the following files and directories..."
       echo -n "$(find $_EXPPATH -print)"
       # any other file should be rsynced by now
-      umount $_EXPPATH || true
-      rm -rf $_EXPPATH 
+      umount $_EXPPATH || echo -n "Umount of $_EXPPATH failed"
+      rm -rf $_EXPPATH
 
       if (systemctl -q is-active marvind.service); then
         echo "Monroe Scheduler is running keep .traffic and .status"
