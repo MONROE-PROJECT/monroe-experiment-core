@@ -12,11 +12,11 @@ build_container=$RANDOM
 
 srcdir=$(abspath "$1")
 outdir=$(abspath "$2")
-ignore_files="Dockerfile *.deb build.sh"
+ignore_files="Dockerfile *.deb build.sh *.md"
 
 echo "Building the build container for $(basename $srcdir)"
 docker pull debian:stretch >/dev/null
-docker build --rm -t $build_container  . >/dev/null && echo "Finished building $build_container" 
+docker build --rm -t $build_container  . >/dev/null && echo "Finished building $build_container"
 
 # Set the paths and current UID and GID to container (to set correct output permissions)
 docker_args="-i -v $srcdir:/source-ro:ro -v $outdir:/output -e USER=$(id -u) -e GROUP=$(id -g)"
@@ -27,5 +27,5 @@ echo "Destination = $outdir"
 echo "Ignoring these files = $ignore_files"
 docker run --rm -e IGNORE_FILES="$ignore_files" $docker_args $build_container bash -c "/build.sh"
 
-echo "Deleteing temporarty build container : $build_container"
+echo "Deleting temporarty build container : $build_container"
 docker rmi --force $CONTAINER &>/dev/null

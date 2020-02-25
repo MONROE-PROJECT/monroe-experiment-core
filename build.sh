@@ -17,11 +17,11 @@ fi
 
 echo "Using global build file to build $(basename $srcdir)"
 build_container=$RANDOM
-ignore_files="Dockerfile *.deb build.sh"
+ignore_files="Dockerfile *.deb build.sh *.md"
 
 echo "Building the global build container"
 docker pull debian:stretch >/dev/null
-docker build --rm -t $build_container  . >/dev/null && echo "Finished building $build_container" 
+docker build --rm -t $build_container  . >/dev/null && echo "Finished building $build_container"
 
 # Set the paths and current UID and GID to container (to set correct output permissions)
 docker_args="-i -v $srcdir:/source-ro:ro -v $outdir:/output -e USER=$(id -u) -e GROUP=$(id -g)"
