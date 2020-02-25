@@ -9,12 +9,12 @@ USER_RSYNC_PORT="2280"
 USER_RSYNC_REPO=""
 USER_RSYNC_TODIR="/monroe-local-repo/experiments/"
 
-# Update above default variables if needed 
+# Update above default variables if needed
 . /etc/default/monroe-experiments
 
 export PATH=/usr/bin/:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
 
-#TODO: File lock 
+#TODO: File lock
 DEVELOPMENT=$(cat /monroe/development/enabled 2>/dev/null|| echo 0)
 [ $DEVELOPMENT -eq 1 ] && exit 1
 
@@ -37,10 +37,10 @@ for SCHEDID in $(experiments -a); do
   _EXPPATH=$USERDIR/$SCHEDID
   echo "Retriving experiment logs"
   CONTAINER_NAME=monroe-$SCHEDID
-  if [ ! -z "$(docker ps -a |grep -w $CONTAINER_NAME)" ]; then 
+  if [ ! -z "$(docker ps -a |grep -w $CONTAINER_NAME)" ]; then
     docker logs $CONTAINER_NAME 2>&1 > $_EXPPATH/container.log
   fi
-  
+
   # do not run rsync if a user experiment is running
   experiments &>/dev/null && continue
 
@@ -77,25 +77,25 @@ for SCHEDID in $(experiments -a); do
       logger -t monroe-user-experiments "Error updating traffic report $SCHEDID from values ($TOTAL, $RESULTS, $UPDATE, $TRAFFIC)"
     fi
 
-    if [ -f "$_EXPPATH.conf" ] && [ "$CHECK_STORAGE_QUOTA" == "1" ]; then 
+    if [ -f "$_EXPPATH.conf" ] && [ "$CHECK_STORAGE_QUOTA" == "1" ]; then
       QUOTA=$(cat $_EXPPATH.conf | jq -r '.storage // 0')
 
       if [ "$RESULTS" -gt "$QUOTA" ]; then
-        PID=$(cat $_EXPPATH.pid) 
+        PID=$(cat $_EXPPATH.pid)
         kill -9 $PID  # Should be more graceful maybe
         echo "storage quota exceeded." >> $_EXPPATH/container.stat
         echo "failed; storage quota exceeded" > $_EXPPATH.status
       fi
     fi
   fi
-  if [[ -f $_EXPPATH.stopped && -z "$(find $_EXPPATH -type f -print -quit)" ]];then 
-      echo -n "All files synched, cleaning files... "
+  if [[ -f $_EXPPATH.stopped && -z "$(find $_EXPPATH -type f -print -quit)" ]];then
+      echo -n "All files synched, will delete the following files and directories..."
+      echo -n "$(find $_EXPPATH -print)"
       # any other file should be rsynced by now
-      # TODO: WHat if it is not mounted n the first place
-      umount $_EXPPATH
-      rmdir  $_EXPPATH
+      umount $_EXPPATH || echo -n "Umount of $_EXPPATH failed"
+      rm -rf $_EXPPATH
 
-      if (systemctl -q is-active marvind.service); then 
+      if (systemctl -q is-active marvind.service); then
         echo "Monroe Scheduler is running keep .traffic and .status"
         # .traffic and .status should be kept (are deleted by external scripts after read)
         mv     $_EXPPATH.traffic  $_EXPPATH-traffic
