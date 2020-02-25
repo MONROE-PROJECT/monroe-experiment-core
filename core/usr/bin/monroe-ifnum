@@ -1,6 +1,9 @@
 #!/bin/bash
 set -e
 
+#Only allow one instance at the time wait 10 seconds (more than enough to update a file)
+[ "${FLOCKER}" != "$0" ] && exec env FLOCKER="$0" flock -e -w 10 "$0" "$0" "$@" || :
+
 # generate a unique static IP for each interface name metadata is .0.1
 # $1 - interface name (e.g wwan0)
 # $2 - IP range to map to (e.g 172.18)

@@ -8,13 +8,17 @@ USER_RSYNC_KEY="/etc/keys/repo.monroe-system.eu"
 USER_RSYNC_PORT="2280"
 USER_RSYNC_REPO=""
 USER_RSYNC_TODIR="/monroe-local-repo/experiments/"
+USER_RSYNC_LOCK_WAIT=30
 
 # Update above default variables if needed
 . /etc/default/monroe-experiments
 
 export PATH=/usr/bin/:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
 
-#TODO: File lock
+# Only allow one instance at the time, wait USER_RSYNC_LOCK_WAIT seconds to try to accuire the lock
+# It is run every minute form cron.d so USER_RSYNC_LOCK_WAIT need to be less
+[ "${FLOCKER}" != "$0" ] && exec env FLOCKER="$0" flock -e -w ${USER_RSYNC_LOCK_WAIT} "$0" "$0" "$@" || :
+
 DEVELOPMENT=$(cat /monroe/development/enabled 2>/dev/null|| echo 0)
 [ $DEVELOPMENT -eq 1 ] && exit 1
 
