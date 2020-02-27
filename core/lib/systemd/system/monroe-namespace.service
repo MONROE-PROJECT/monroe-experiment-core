@@ -11,7 +11,8 @@ After=network.target docker.service
 ExecStartPre=/usr/bin/pull-base-containers
 ExecStart=/usr/bin/monroe-namespace
 # Should restrict to only monroe containers
-ExecStop=/usr/bin/docker stop -t 0 monroe-namespace
+ExecStop=/usr/bin/monroe-namespace stop
 Type=simple
 Restart=on-failure
 TimeoutSec=30min
+ReStartSec=5
