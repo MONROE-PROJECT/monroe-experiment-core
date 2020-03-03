@@ -15,4 +15,4 @@ ExecStop=/usr/bin/monroe-namespace stop
 Type=simple
 Restart=on-failure
 TimeoutSec=30min
-ReStartSec=5
+RestartSec=5
