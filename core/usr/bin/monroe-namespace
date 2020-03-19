@@ -1,6 +1,8 @@
 #!/bin/bash
 set -e
 
+STOP="$1"
+
 # Default variables
 VETH_IPRANGE=172.18
 METADATA_IPRANGE=172.17.0
@@ -76,35 +78,20 @@ function update_dnsmasq_conf {
   diff /tmp/dnsmasq-servers-netns-monroe.conf /tmp/dnsmasq-servers-netns-monroe.bak 2>&1 || true
 }
 
-##############################################################################
-
-# Init namespace
-
-# TODO: Is this the best way to ensure that URL_NOOP exist?
-# ensure base image is pulled
-echo -n "Ensure base images are up-to-date: "
-docker images --format "{{.Repository}}:{{.Tag}}" | grep $URL_NOOP || pull-base-containers
-
-# TODO: Replace the following with docker network create --driver bridge monroe?
-# GET : ContainerID of running Namespace container if exists)
-CID=$(docker ps --no-trunc -qf name=$MONROE_NAMESPACE_CONTAINER_NAME)
-
-echo -n "Starting Monroe Namespace: "
-if [ ! -e ${_MNR_NAMESPACE_PATH_} ] || [ -z "$CID" ]; then
-  # Make sure that all monroe containers are stopped
-  echo ''
+function stop_namespace {
   for CONTAINER in $(docker ps -q); do
     IMAGENAME=$(docker inspect --format '{{.Config.Image}}' $CONTAINER)
     if [[ "$IMAGENAME" == "monroe-"* ]] || [[ "$IMAGENAME" == "base-"* ]] ; then
         echo -ne "\t* Stopping monroe container: "
-	docker stop -t 0 $CONTAINER 2>/dev/null
+        docker stop -t 0 $CONTAINER 2>/dev/null
     fi
   done
   # Remove the monroe-namespace container
   echo -ne "\t* Removing monroe container: "
   docker rm -f $MONROE_NAMESPACE_CONTAINER_NAME 2>/dev/null || true
+}
 
-  echo -ne "\t* Starting Monroe Namespace: "
+function init_namespace {
   docker run -d --net=none --name $MONROE_NAMESPACE_CONTAINER_NAME base-$URL_NOOP /bin/sh /opt/monroe/noop.sh
   CID=$(docker ps --no-trunc -qf name=$MONROE_NAMESPACE_CONTAINER_NAME)
   if [ -z "$CID" ]; then
@@ -131,13 +118,24 @@ if [ ! -e ${_MNR_NAMESPACE_PATH_} ] || [ -z "$CID" ]; then
   echo " done."
 
   _log_ "Started noop container and monroe netns."
+}
+
+
+##############################################################################
+
+echo -n "Stopping Monroe Namespace: "
+stop_namespace
+echo " -> done"
+
+if [ ! -z "$STOP" ]; then
+  exit 0
 else
+  echo -n "Starting Monroe Namespace: "
+  init_namespace
   echo " -> done"
 fi
 
-# Init Namespace Done
-
-# Loop while namesapce is up 
+# Loop while namesapce is up
 while [ -e ${_MNR_NAMESPACE_PATH_} ] || [ ! -z "$(docker ps --no-trunc -qf name=$MONROE_NAMESPACE_CONTAINER_NAME)" ]; do
   _UPDATE_FIREWALL_="0"
 
