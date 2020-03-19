@@ -87,6 +87,7 @@ for SCHEDID in $(experiments -a); do
       if [ "$RESULTS" -gt "$QUOTA" ]; then
         PID=$(cat $_EXPPATH.pid)
         kill -9 $PID  # Should be more graceful maybe
+        #TODO : CAll container-stop here?
         echo "storage quota exceeded." >> $_EXPPATH/container.stat
         echo "failed; storage quota exceeded" > $_EXPPATH.status
       fi

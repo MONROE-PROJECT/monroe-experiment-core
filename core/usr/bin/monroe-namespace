@@ -45,6 +45,9 @@ if [ -z "$(ls -A /etc/circle.d/ 2>/dev/null)" ] && [ "$ADD_FW_ANTI_LOCKOUT_RULE"
   echo "$RULES" > $TARGET
 fi
 
+echo -n "Creating /etc/netns/monroe -> "
+mkdir -p /etc/netns/monroe/
+echo  "done"
 
 function _log_ {
 	echo $1
@@ -74,6 +77,9 @@ function update_dnsmasq_conf {
   cat /etc/dnsmasq.d/dnsmasq-custom.conf | grep -v servers-file | grep -v "=8.8" > /tmp/dnsmasq-servers-netns-monroe.conf
   sed $TRANSLATE /tmp/dnsmasq-servers.conf >> /tmp/dnsmasq-servers-netns-monroe.conf
 
+  # Update the resolv.conf file in the namespace to match the global one  but with pointing to
+  # to the dnsmasq instead of systemd (if used)  
+  sed  '/nameserver/c\nameserver 127.0.0.1' /etc/resolv.conf > /etc/netns/monroe/resolv.conf
   # return non-empty if the files differ, or the bak file does not exist
   diff /tmp/dnsmasq-servers-netns-monroe.conf /tmp/dnsmasq-servers-netns-monroe.bak 2>&1 || true
 }
@@ -223,6 +229,18 @@ while [ -e ${_MNR_NAMESPACE_PATH_} ] || [ ! -z "$(docker ps --no-trunc -qf name=
       ${MNS} ip link set montmp name $OP
       ${MNS} ip addr add ${IPRANGE}.2/24 dev $OP
       ${MNS} ip link set $OP up
+      echo "done"
+
+      # Add a manual arp entry, WORKAROUND on Ubuntu
+      HOSTHW=$(cat /sys/class/net/${IF}Br/address)
+      MNRHW=$(${MNS} cat /sys/class/net/${IF}/address)
+      echo -ne "\t\t* Delete existing ARP entries (${IPRANGE}.1 -> ${IF}, ${IPRANGE}.2 -> ${IF}Br) -> "
+      ${MNS} arp -d ${IPRANGE}.1 -i ${IF} 2> /dev/null || true
+      arp -d ${IPRANGE}.2 -i ${IF}Br 2> /dev/null || true
+      echo "done"
+      echo -ne "\t\t* Create ARP entries (${IPRANGE}.1 -> ${HOSTHW}, ${IPRANGE}.2 -> ${MNRHW}) -> "
+      arp -s ${IPRANGE}.2 -i ${IF}Br ${MNRHW}
+      ${MNS} arp -s ${IPRANGE}.1 -i ${IF} ${HOSTHW}
       echo "done"
 
       echo -ne "\t\t* Create NAT rules -> "
