@@ -1,23 +1,21 @@
 # monroe-experiment-core
 MONROE as a package (MaaP).
- 
-## Rationale 
+
+## Rationale
 The rationale behind this repo/package is to allow monroe (with minimal dependencys) to be installed on a fresh Debian installation.
 
-## Howto install a MonroeVN (quick version) 
+## Howto install a MonroeVN (quick version)
 1. Install a fresh debian stretch (with defaults)
-2. (as root): `sed -i 's/rfc3442-classless-static-routes,//g'`
-3. (as root):  ```apt install -y curl && curl -fsSL https://raw.githubusercontent.com/MONROE-PROJECT/monroe-experiment-core/ReleaseA/get-monroe-release-a.sh -o get-monroe-release-a.sh && sh get-monroe-release-a.sh``` 
+2. (as root):  ```apt install -y curl && curl -fsSL https://raw.githubusercontent.com/MONROE-PROJECT/monroe-experiment-core/ReleaseA/get-monroe-release-a.sh -o get-monroe-release-a.sh && sh get-monroe-release-a.sh```
 
 ## Howto Build (need to have docker,bash and internet connection)
-1. clone this repo 
-2. cd monroe-experiment-core 
-3. ./build.sh core 
+1. clone this repo
+2. cd monroe-experiment-core
+3. ./build.sh core
 
 
-## How to install (long version) 
-### 1. Install a fresh debian stretch (with defaults) 
-* Disable DHCP option rfc3442-classless-static-routes `sed -i 's/rfc3442-classless-static-routes,//g'`
+## How to install (long version)
+### 1. Install a fresh debian stretch (with defaults)
 ### 2. Install docker
 * ```curl -fsSL https://get.docker.com -o get-docker.sh && sh get-docker.sh```
 ### 3. Install monroe-experiment-core
@@ -25,11 +23,11 @@ The rationale behind this repo/package is to allow monroe (with minimal dependen
 * ```apt install apt-transport-https curl```
 * ```echo 'deb [trusted=yes] https://raw.githubusercontent.com/MONROE-PROJECT/apt-repo/master stretch main' > /etc/apt/sources.list.d/monroe.list```
 * ```apt update && apt install jq ssh libuv1 libjson-c3 libjq1 libonig4 dnsutils circle table-allocator-* monroe-experiment-core```
-#### 3.2 Install monroe-experiment-core from source 
+#### 3.2 Install monroe-experiment-core from source
 * Get circle and table-allocator-* deb packages (build or get from a running monroe node)
 * ```apt install ./circle_1.1.2-deb8u3_all.deb ./table-allocator-client_0.1.2-deb8u-20170831x1107-65b66b_amd64.deb ./table-allocator-server_0.1.2-deb8u-20170831x1107-65b66b_amd64.deb jq ssh libuv1 libjson-c3 libjq1 libonig4 dnsutils ./monroe-experiment-core_*_amd64.deb```
 ### 4. Install scheduler
-Needed if want to schedule (ie run/control) experiments from a external station. 
+Needed if want to schedule (ie run/control) experiments from a external station.
 For a publically available node the API key needs to be changed!
 #### 4.1 Install TAP/Rest API scheduler from apt-repo
 * ```apt install monroe-tap-agent```
