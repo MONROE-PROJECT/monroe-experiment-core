@@ -57,6 +57,8 @@ handle_nm_ifup()
 
 handle_ifup()
 {
+    echo "$(env)" >> /tmp/ifup-env.log
+    echo "\n" >> /tmp/ifup-env.log
     #get route
     rt_table=$(/usr/sbin/table_allocator_client -4 -s -a "$IF_ADDRESS" -n "$IF_NETMASK" -i "$IFACE" -d tas_socket)
 
@@ -68,8 +70,7 @@ handle_ifup()
 
     #This is not the nicest way in the world to extract network number, look into
     #bash bitwise operators when time
-    network_number=$(ipcalc "$IF_ADDRESS"/"$IF_NETMASK" | grep "^Network" | tr -d " " |
-    cut -d ":" -f 2 | cut -d "/" -f 1)
+    network_number=$(ipcalc "$IF_ADDRESS"/"$IF_NETMASK" | grep "^Network" | tr -d " " | cut -d ":" -f 2 | cut -d "/" -f 1)
 
     #we are run from up, static configuration is already applied
 
