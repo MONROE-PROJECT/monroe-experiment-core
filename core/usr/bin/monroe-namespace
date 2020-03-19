@@ -95,6 +95,9 @@ function stop_namespace {
   # Remove the monroe-namespace container
   echo -ne "\t* Removing monroe container: "
   docker rm -f $MONROE_NAMESPACE_CONTAINER_NAME 2>/dev/null || true
+  
+  # Deleting custom config 
+  rm -rf /etc/netns/monroe
 }
 
 function init_namespace {
