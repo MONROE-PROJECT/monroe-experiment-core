@@ -23,7 +23,7 @@ make_resolv_conf()
             echo "$server_str" >> "$DNSMASQ_SERVER_PATH"
         fi
     done
-    
+
     PID=$(pgrep dnsmasq)
     if [ $? -eq 0 ] && [ ! -z "$PID" ]; then
         kill -s HUP $PID
@@ -292,6 +292,67 @@ handle_timeout()
                 if [ -n "$if_metric" ]; then
                     if_metric=$((if_metric+1))
                 fi
+            done
+        else
+            set -- $new_rfc3442_classless_static_routes
+
+            while [ $# -gt 0 ]; do
+                net_length=$1
+                via_arg=''
+
+                case $net_length in
+                    32|31|30|29|28|27|26|25)
+                        if [ $# -lt 9 ]; then
+                            return 1
+                        fi
+                        net_address="${2}.${3}.${4}.${5}"
+                        gateway="${6}.${7}.${8}.${9}"
+                        shift 9
+                        ;;
+                    24|23|22|21|20|19|18|17)
+                        if [ $# -lt 8 ]; then
+                            return 1
+                        fi
+                        net_address="${2}.${3}.${4}.0"
+                        gateway="${5}.${6}.${7}.${8}"
+                        shift 8
+                        ;;
+                    16|15|14|13|12|11|10|9)
+                        if [ $# -lt 7 ]; then
+                            return 1
+                        fi
+                        net_address="${2}.${3}.0.0"
+                        gateway="${4}.${5}.${6}.${7}"
+                        shift 7
+                        ;;
+                    8|7|6|5|4|3|2|1)
+                        if [ $# -lt 6 ]; then
+                            return 1
+                        fi
+                        net_address="${2}.0.0.0"
+                        gateway="${3}.${4}.${5}.${6}"
+                        shift 6
+                        ;;
+                    0)    # default route
+                        if [ $# -lt 5 ]; then
+                            return 1
+                        fi
+                        net_address="0.0.0.0"
+                        gateway="${2}.${3}.${4}.${5}"
+                        shift 5
+                        ;;
+                    *)    # error
+                        return 1
+                        ;;
+                esac
+
+                # take care of link-local routes
+                if [ "${gateway}" != '0.0.0.0' ]; then
+                    via_arg="via ${gateway}"
+                fi
+
+                # set route (ip detects host routes automatically)
+                ip -4 route add ${net_address}/${net_length} ${via_arg} dev ${interface} table ${rt_table} >/dev/null 2>&1
             done
         fi
 
