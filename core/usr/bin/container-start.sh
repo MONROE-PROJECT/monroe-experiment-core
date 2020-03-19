@@ -8,7 +8,6 @@ STATUS=$2
 USERDIR="/experiments/user"
 CONTAINER_NAME=monroe-$SCHEDID
 NEAT_CONTAINER_NAME=monroe-neat-proxy
-MONROE_NAMESPACE_CONTAINER_NAME=monroe-namespace
 EXCLUDED_IF="Br|lo|metadata|wwan|ifb|docker"
 OPINTERFACES="nlw_"
 UNWANTED_TASKS_AT_EXPERIMENT_START=("docker pull" "rsync" "ansible" "ansible-wrapper" "apt" "scp")
@@ -19,7 +18,7 @@ ERROR_CONTAINER_DID_NOT_START=10
 ERROR_NETWORK_CONTEXT_NOT_FOUND=11
 ERROR_IMAGE_NOT_FOUND=12
 ERROR_MAINTENANCE_MODE=13
-
+MONROE_NAMESPACE_CONTAINER_NAME=monroe-namespace
 
 # Update above default variables if needed
 . /etc/default/monroe-experiments
@@ -147,7 +146,7 @@ docker stop --time=10 $NEAT_CONTAINER_NAME 2>/dev/null || true
 
 if [ ! -z "$NEAT_PROXY"  ] && [ -x /usr/bin/monroe-neat-init ]; then
   NEAT_PROXY_PATH=$_EXPPATH/neat-proxy/
-  /usr/bin/monroe-neat-init $NEAT_PROXY_PATH
+  /usr/bin/monroe-neat-init $NEAT_PROXY_PATH $_EXPPATH
   _UPDATE_FIREWALL_="1"
 fi
 ##################################################################
@@ -242,7 +241,7 @@ else
            $MOUNT_DISK \
            $TSTAT_DISK \
            $CONTAINER_NAME $OVERRIDE_PARAMETERS)
-	  # CID: the runtime container ID
+      # CID: the runtime container ID
     echo "ok."
     CID=$(docker ps --no-trunc | grep "$CONTAINER_NAME" | awk '{print $1}' | head -n 1)
     PID=""

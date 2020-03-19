@@ -2,6 +2,7 @@
 set -e
 
 NEAT_PROXY_PATH=$1
+_EXPPATH=$2
 URL_NEAT_PROXY=monroe/neat-proxy
 EXCLUDED_IF="Br|lo|metadata|wwan|ifb|docker"
 VETH_IPRANGE=172.18
@@ -27,8 +28,9 @@ if [ -z "$CID_PROXY" ]; then
     mkdir -p /var/run/neat/
     docker run -d --net=host \
                -v $NEAT_PROXY_PATH:/monroe/results \
-           -v /var/run/neat:/var/run/neat \
-            --name monroe-neat-proxy \
+               -v /var/run/neat:/var/run/neat \
+               -v $_EXPPATH.conf:/monroe/config:ro \
+	       --name monroe-neat-proxy \
                $URL_NEAT_PROXY || true;
     echo "is started"
 fi
@@ -38,6 +40,9 @@ for IF in $INTERFACES; do
   TARGET="/etc/circle.d/60-$IF-neat-proxy.rules"
   if [ ! -f ${TARGET} ]; then
     IPRANGE=$(/usr/bin/monroe-ifnum $IF $VETH_IPRANGE)
+    #    If on a physical node also add these
+    #    \${ipt4} -A INPUT -p tcp -s ${IPRANGE}.0/24 -d 172.16.253.1/24 -j DROP
+    #    \${ipt4} -A INPUT -p tcp -s ${IPRANGE}.0/24 -d 172.16.254.1/24 -j DROP
     RULES="\
 \${ipt4} -A INPUT -p tcp -s ${IPRANGE}.0/24 -d localhost -j DROP
 \${ipt4} -A INPUT -p tcp -s ${IPRANGE}.0/24 -j ACCEPT
