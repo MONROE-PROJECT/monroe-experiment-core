@@ -4,6 +4,7 @@ set -e
 NEAT_PROXY_PATH=$1
 _EXPPATH=$2
 URL_NEAT_PROXY=monroe/neat-proxy
+NEAT_CONTAINER_NAME=monroe-neat-proxy
 EXCLUDED_IF="Br|lo|metadata|wwan|ifb|docker"
 VETH_IPRANGE=172.18
 
@@ -30,7 +31,7 @@ if [ -z "$CID_PROXY" ]; then
                -v $NEAT_PROXY_PATH:/monroe/results \
                -v /var/run/neat:/var/run/neat \
                -v $_EXPPATH.conf:/monroe/config:ro \
-	       --name monroe-neat-proxy \
+               --name ${NEAT_CONTAINER_NAME} \
                $URL_NEAT_PROXY || true;
     echo "is started"
 fi
