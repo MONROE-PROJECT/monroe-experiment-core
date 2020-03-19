@@ -21,7 +21,7 @@ fi
 
 echo "Using global build file to build $(basename $srcdir)"
 build_container=$RANDOM
-ignore_files="Dockerfile *.deb build.sh"
+ignore_files="Dockerfile *.deb build.sh *.md"
 
 echo "Building the global build container"
 docker pull debian:stretch >/dev/null

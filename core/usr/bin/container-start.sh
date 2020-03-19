@@ -8,6 +8,7 @@ STATUS=$2
 USERDIR="/experiments/user"
 CONTAINER_NAME=monroe-$SCHEDID
 NEAT_CONTAINER_NAME=monroe-neat-proxy
+MONROE_NAMESPACE_CONTAINER_NAME=monroe-namespace
 EXCLUDED_IF="Br|lo|metadata|wwan|ifb|docker"
 OPINTERFACES="nlw_"
 UNWANTED_TASKS_AT_EXPERIMENT_START=("docker pull" "rsync" "ansible" "ansible-wrapper" "apt" "scp")
@@ -19,7 +20,8 @@ ERROR_NETWORK_CONTEXT_NOT_FOUND=11
 ERROR_IMAGE_NOT_FOUND=12
 ERROR_MAINTENANCE_MODE=13
 
-# Update above default variables if needed 
+
+# Update above default variables if needed
 . /etc/default/monroe-experiments
 
 _EXPPATH=$USERDIR/$SCHEDID
@@ -43,7 +45,7 @@ if [ -f $_EXPPATH.conf ]; then
   IS_VM=$(echo $CONFIG | jq -r '.vm // empty');
   NEAT_PROXY=$(echo $CONFIG | jq -r '.neat // empty');
 else
-  echo "No config file found ($_EXPPATH.conf )" 
+  echo "No config file found ($_EXPPATH.conf )"
   exit $ERROR_IMAGE_NOT_FOUND
 fi
 
@@ -84,7 +86,7 @@ echo $COUNT > $_EXPPATH.counter
 
 if [ -e /etc/nodeid.n2 ]; then
   NODEIDFILE="/etc/nodeid.n2"
-elif [ -e /etc/nodeid ]; then 
+elif [ -e /etc/nodeid ]; then
   NODEIDFILE="/etc/nodeid"
 else
   NODEIDFILE="/etc/hostname"
@@ -103,19 +105,19 @@ echo "ok."
 if [ ! -z "$EDUROAM_IDENTITY" ] && [ -x /usr/bin/eduroam-login.sh ] && [ ! -z "$EDUROAM_HASH" ]; then
     /usr/bin/eduroam-login.sh $EDUROAM_IDENTITY $EDUROAM_HASH
 fi
-# TODO: Error code if eduroam does not exist and robustify 
+# TODO: Error code if eduroam does not exist and robustify
 
-### PYCOM 
+### PYCOM
 PYCOM_DIR="/dev/pycom"
 MOUNT_PYCOM=""
-if [ -x "/usr/bin/ykushcmd" ];then 
+if [ -x "/usr/bin/ykushcmd" ];then
   # Power up all yepkit ports (assume pycom is only used for yepkit)"
   # TODO: detect if yepkit is there and optionally which port a pycom device is attached to
   echo "Power up all ports of the yepkit"
   for port in 1 2 3; do
     /usr/bin/ykushcmd -u $port || echo "Could not power up yepkit port : $port"
   done
-  if  [ -x /usr/bin/factory-reset-pycom.py ]; then 
+  if  [ -x /usr/bin/factory-reset-pycom.py ]; then
     echo -n "Waiting for $PYCOM_DIR: "
     timeout 30 bash -c -- "while [ ! -d $PYCOM_DIR ];do echo -n "."; sleep 1; done" || true
     echo " done, $(ls $PYCOM_DIR 2>/dev/null|wc -l) pycom devices found"
@@ -123,12 +125,12 @@ if [ -x "/usr/bin/ykushcmd" ];then
 fi
 
 # Reset pycom devices if they exist
-if  [ -x /usr/bin/factory-reset-pycom.py ] && [ -d "$PYCOM_DIR" ]; then 
+if  [ -x /usr/bin/factory-reset-pycom.py ] && [ -d "$PYCOM_DIR" ]; then
     echo "Trying to factory reset the board(s) (timeout 30 seconds per board)"
     for board in $(ls $PYCOM_DIR 2>/dev/null); do
       timeout 35 /usr/bin/factory-reset-pycom.py --device $PYCOM_DIR/$board --wait 30 --baudrate 115200 && {
         MOUNT_PYCOM="${MOUNT_PYCOM} --device $PYCOM_DIR/$board"
-      } 
+      }
     done
 fi
 ###
@@ -140,7 +142,7 @@ if [ -f "$1" ]; then
     rm -f /etc/circle.d/60-*-neat-proxy.rules
     _UPDATE_FIREWALL_="1"
 fi
-## Stop the neat proxy container if any 
+## Stop the neat proxy container if any
 docker stop --time=10 $NEAT_CONTAINER_NAME 2>/dev/null || true
 
 if [ ! -z "$NEAT_PROXY"  ] && [ -x /usr/bin/monroe-neat-init ]; then
@@ -152,7 +154,7 @@ fi
 
 ### Let modems rest for a while = idle period
 MODEMS=$(ls /sys/class/net/ | egrep -v $EXCLUDED_IF | egrep $OPINTERFACES) || true
-if [ ! -z "$MODEMS" ]; then   
+if [ ! -z "$MODEMS" ]; then
   ## drop all network traffic for 30 seconds (idle period)
   # This line is to ensure that we do not kills the connection if the script is killed
   nohup /bin/bash -c 'sleep 35; circle start' > /dev/null &
@@ -166,7 +168,7 @@ fi
 ###
 
 ## Restart the firewall if needed
-if [ "$_UPDATE_FIREWALL_" -eq "1" ];then 
+if [ "$_UPDATE_FIREWALL_" -eq "1" ];then
   echo -n "Restarting firewall: "
   circle start
 fi
@@ -219,7 +221,7 @@ if [ ! -z "$IS_VM" ] && [ -x /usr/bin/vm-deploy.sh ] && [ -x /usr/bin/vm-start.s
     echo "Starting VM... "
     # Kicking alive the vm specific stuff
     /usr/bin/vm-start.sh $SCHEDID $OVERRIDE_PARAMETERS
-    echo "vm started." 
+    echo "vm started."
     CID=""
     PNAME="kvm"
     CONTAINER_TECHONOLOGY="vm"
@@ -252,7 +254,7 @@ else
     fi
 fi
 
-if [ -x /usr/bin/usage-defaults ]; then 
+if [ -x /usr/bin/usage-defaults ]; then
   # start accounting
   echo "Starting accounting."
   /usr/bin/usage-defaults 2>/dev/null || true
