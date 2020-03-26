@@ -7,6 +7,7 @@ URL_NEAT_PROXY=monroe/neat-proxy
 NEAT_CONTAINER_NAME=monroe-neat-proxy
 EXCLUDED_IF="Br|lo|metadata|wwan|ifb|docker"
 VETH_IPRANGE=172.18
+NEAT_CG_DIR="/tmp/cgroupv2/neat-proxy"
 
 # Update default variables if needed
 . /etc/default/monroe-experiments
@@ -17,6 +18,19 @@ INTERFACES="$(ls /sys/class/net/|egrep -v $EXCLUDED_IF)" || true
 ### Start the NEAT DOCKER proxy ######################################
 CID_PROXY=$(docker ps --no-trunc | grep $URL_NEAT_PROXY | awk '{print $1}' | head -n 1)
 echo "NEAT: neat-proxy enabled ... "
+
+if [ -z "$CID_PROXY" ]; then
+    #Cleanup
+    echo -n "NEAT: cleanup cgroups"
+    umount ${NEAT_CG_DIR} || echo -n " (umount of ${NEAT_CG_DIR} failed or did not exist)"
+    rm -rf ${NEAT_CG_DIR} && echo " -> done"
+
+    # setup cgroup
+    echo -n "NEAT: creating cgroup dir ${NEAT_CG_DIR}"
+    mkdir -p ${NEAT_CG_DIR} && echo " -> ok"
+    echo -n "NEAT: mount cgroup ${NEAT_CG_DIR}"
+    mount -t cgroup2 none ${NEAT_CG_DIR} && echo " -> ok"
+fi
 echo -n "NEAT: neat-proxy container: ${CID_PROXY}"
 
 # Configure and start neat-proxy container if not running
@@ -27,10 +41,12 @@ if [ -z "$CID_PROXY" ]; then
     ip route add local 0.0.0.0/0 dev lo table 100
     mkdir -p $NEAT_PROXY_PATH
     mkdir -p /var/run/neat/
-    docker run -d --net=host \
+
+    docker run -d --privileged --net=host \
                -v $NEAT_PROXY_PATH:/monroe/results \
                -v /var/run/neat:/var/run/neat \
                -v $_EXPPATH.conf:/monroe/config:ro \
+               -v ${NEAT_CG_DIR}:/tmp/cgroupv2/foo \
                --name ${NEAT_CONTAINER_NAME} \
                $URL_NEAT_PROXY || true;
     echo "is started"

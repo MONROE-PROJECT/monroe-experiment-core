@@ -1,4 +1,4 @@
-# Variables in this file will override the default 
+# Variables in this file will override the default
 
 # Shared Variables
 #USERDIR="/experiments/user"
@@ -6,6 +6,7 @@
 #MNS="ip netns exec monroe"
 #NEAT_CONTAINER_NAME=monroe-neat-proxy
 #URL_NEAT_PROXY=monroe/neat-proxy
+#NEAT_CG_DIR="/tmp/cgroupv2/neat-proxy"
 #EXCLUDED_IF="Br|lo|metadata|wwan|ifb|docker"
 #OPINTERFACES="nlw_|wwan"
 #VETH_IPRANGE=172.18
@@ -14,7 +15,7 @@
 ## Monroe Namespace
 #METADATA_IPRANGE=172.17.0   #172.17.0.1 -> 172.17.0.2
 #DNS_TEST_URL="www.monroe-system.eu"
-#UPDATE_INTERFACES_MNS=30  # > 0 
+#UPDATE_INTERFACES_MNS=30  # > 0
 #URL_NOOP="monroe/base:complete"
 #ADD_FW_ANTI_LOCKOUT_RULE=1
 
