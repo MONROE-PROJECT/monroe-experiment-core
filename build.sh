@@ -29,6 +29,7 @@ docker build --rm -t $build_container  . >/dev/null && echo "Finished building $
 
 # Set the paths and current UID and GID to container (to set correct output permissions)
 docker_args="-i -v $srcdir:/source-ro:ro -v $outdir:/output -e USER=$(id -u) -e GROUP=$(id -g)"
+UBUNTU_FIXES=0
 for debian_version in $VERSIONS
 do
     if [[ "$debian_version" == *"deb"* ]]
@@ -36,6 +37,7 @@ do
         ignore="$ignore_files /etc/networkd-dispatcher"
     elif [[ "$debian_version" == *"ubuntu"* ]]
     then
+        UBUNTU_FIXES=1
         ignore="$ignore_files /etc/network /etc/dhcp"
     else
         ignore=$ignore_files
@@ -44,7 +46,7 @@ do
     echo "Source = $srcdir"
     echo "Destination = $outdir"
     echo "Ignoring these files and directories = $ignore"
-    docker run --rm -e IGNORE_FILES_AND_DIR="$ignore" -e debian_version="$debian_version" $docker_args $build_container bash -c "/build.sh"
+    docker run --rm -e APPLY_UBUNTU_FIXES="$UBUNTU_FIXES" -e IGNORE_FILES_AND_DIR="$ignore" -e debian_version="$debian_version" $docker_args $build_container bash -c "/build.sh"
 done
 echo "Deleting temporarty build container : $build_container"
 docker rmi --force $build_container &>/dev/null

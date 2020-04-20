@@ -17,8 +17,12 @@ RUN pip3 install f2format
 # Used to add extra commands neded be executed before build
 RUN echo 'mkdir -p /source/' >> /prebuild.sh
 RUN echo 'cp -a /source-ro/* /source' >> /prebuild.sh
-RUN echo 'for f in ${IGNORE_FILES_AND_DIR}; do rm -rf /source/$f ; done' >> prebuild.sh
-RUN echo 'sed -i s/##DEBIAN_VERSION##/${debian_version}/g /source/DEBIAN/control' >> prebuild.sh
+RUN echo 'for f in ${IGNORE_FILES_AND_DIR}; do rm -rf /source/$f ; done' >> /prebuild.sh
+
+RUN echo 'sed -i s/##DEBIAN_VERSION##/${debian_version}/g /source/DEBIAN/control' >> /prebuild.sh
+
+RUN echo 'if [ "${APPLY_UBUNTU_FIXES}" == "1" ]; then find /source/ -type f -print0 | xargs -0 sed -i s/##_UBUNTU_FIX_##//g ; fi' >> /prebuild.sh
+
 RUN echo 'usr/local/bin/f2format -n /source/' >> /prebuild.sh
 RUN chmod +x /prebuild.sh
 
