@@ -42,9 +42,13 @@ if [ -z "$CID_PROXY" ]; then
     mkdir -p $NEAT_PROXY_PATH
     mkdir -p /var/run/neat/
 
+    KERNELVERSION=$(uname -r)
+    BPFTOOLPATH=$(which bpftool)
     docker run -d --privileged --net=host \
                -v $NEAT_PROXY_PATH:/monroe/results \
                -v /var/run/neat:/var/run/neat \
+               -v ${BPFTOOLPATH}:${BPFTOOLPATH} \
+               -v /usr/lib/linux-tools/${KERNELVERSION}/bpftool:/usr/lib/linux-tools/${KERNELVERSION}/bpftool \
                -v $_EXPPATH.conf:/monroe/config:ro \
                -v ${NEAT_CG_DIR}:/tmp/cgroupv2/foo \
                --name ${NEAT_CONTAINER_NAME} \
