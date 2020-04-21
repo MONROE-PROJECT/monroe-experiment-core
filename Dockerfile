@@ -18,6 +18,7 @@ RUN pip3 install f2format
 RUN echo 'mkdir -p /source/' >> /prebuild.sh
 RUN echo 'cp -a /source-ro/* /source' >> /prebuild.sh
 RUN echo 'for f in ${IGNORE_FILES_AND_DIR}; do rm -rf /source/$f ; done' >> /prebuild.sh
+RUN echo 'for f in ${IGNORE_FILES_AND_DIR_RECURSIVE}; do find /source/ -name "$f" -delete ; done' >> /prebuild.sh
 
 RUN echo 'sed -i s/##DEBIAN_VERSION##/${debian_version}/g /source/DEBIAN/control' >> /prebuild.sh
 

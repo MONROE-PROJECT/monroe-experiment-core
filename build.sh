@@ -22,6 +22,7 @@ fi
 echo "Using global build file to build $(basename $srcdir)"
 build_container=$RANDOM
 ignore_files="Dockerfile *.deb build.sh *.md .DS_Store .vscode *.pyc"
+igonre_files_recursive="$ignore_files"
 
 echo "Building the global build container"
 docker pull debian:stretch >/dev/null
@@ -46,7 +47,7 @@ do
     echo "Source = $srcdir"
     echo "Destination = $outdir"
     echo "Ignoring these files and directories = $ignore"
-    docker run --rm -e APPLY_UBUNTU_FIXES="$UBUNTU_FIXES" -e IGNORE_FILES_AND_DIR="$ignore" -e debian_version="$debian_version" $docker_args $build_container bash -c "/build.sh"
+    docker run --rm -e APPLY_UBUNTU_FIXES="$UBUNTU_FIXES" -e IGNORE_FILES_AND_DIR="$ignore" -e IGNORE_FILES_AND_DIR_RECURSIVE="$ignore_files_recursive" -e debian_version="$debian_version" $docker_args $build_container bash -c "/build.sh"
 done
 echo "Deleting temporarty build container : $build_container"
 docker rmi --force $build_container &>/dev/null
