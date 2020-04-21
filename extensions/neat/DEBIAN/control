@@ -1,5 +1,5 @@
 Package: monroe-extension-neat
-Version: 0.0.3
+Version: 0.0.4-##DEBIAN_VERSION##
 Section: devel
 Priority: optional
 Architecture: amd64

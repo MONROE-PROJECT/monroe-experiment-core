@@ -1,5 +1,5 @@
 Package: monroe-tap-agent
-Version: 0.1.4
+Version: 0.1.5-##DEBIAN_VERSION##
 Section: devel
 Priority: optional
 Architecture: amd64
