@@ -22,7 +22,7 @@ fi
 echo "Using global build file to build $(basename $srcdir)"
 build_container=$RANDOM
 ignore_files="Dockerfile *.deb build.sh *.md .DS_Store .vscode *.pyc"
-igonre_files_recursive="$ignore_files"
+ignore_files_recursive="$ignore_files"
 
 echo "Building the global build container"
 docker pull debian:stretch >/dev/null
