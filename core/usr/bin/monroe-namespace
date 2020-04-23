@@ -6,8 +6,8 @@ STOP="$1"
 # Default variables
 VETH_IPRANGE=172.18
 METADATA_IPRANGE=172.17.0
-EXCLUDED_IF="Br|lo|metadata|wwan|ifb|docker"
-OPINTERFACES="nlw_|wwan"
+EXCLUDED_IF="^MBr[0-9]+$|^lo$|^metadata$|^wwan[0-9]+$|^ifb[0-9]+$|^docker[0-9]+$"
+OPINTERFACES="^nlw_[0-9]+$|^wwan[0-9]+$"
 DNS_TEST_URL="www.monroe-system.eu"
 UPDATE_INTERFACES_MNS=30
 MONROE_NAMESPACE_CONTAINER_NAME=monroe-namespace
@@ -34,6 +34,10 @@ if [ -z "${_INVOKED_FROM_SYSTEMD_}" ] && [ ${_DEBUG_} -eq 0 ]; then
   exit 1
 fi
 
+if [ ${_DEBUG_} -eq 1 ]; then
+  set -ex
+fi
+
 #Anti lockout-rule if circle is not configured
 if [ -z "$(ls -A /etc/circle.d/ 2>/dev/null)" ] && [ "$ADD_FW_ANTI_LOCKOUT_RULE" -eq 1 ]; then
   mkdir -p /etc/circle.d/
@@ -44,10 +48,6 @@ if [ -z "$(ls -A /etc/circle.d/ 2>/dev/null)" ] && [ "$ADD_FW_ANTI_LOCKOUT_RULE"
 \${ipt4} -A FORWARD -j ACCEPT"
   echo "$RULES" > $TARGET
 fi
-
-echo -n "Creating /etc/netns/monroe -> "
-mkdir -p /etc/netns/monroe/
-echo  "done"
 
 function _log_ {
 	echo $1
@@ -99,9 +99,36 @@ function stop_namespace {
 
   # Deleting custom config
   rm -rf /etc/netns/monroe
+
+  CURRENT_BRIDGES="$(ls /sys/class/net/|grep Br)" || true
+
+  # Clean up OLD Bridges (auto cleans {MNS})
+  echo -n "Cleaning up bridge interfaces: "
+  for BRIF in $CURRENT_BRIDGES; do
+    IF=$(cat /sys/class/net/${BRIF}/ifalias || true)  # InterfaceName saved in alias
+    echo -n "."
+    ip link del $BRIF 2>/dev/null || true
+    if [ ! -z "$IF" ]; then
+      echo "" > /sys/class/net/${IF}/ifalias # debian does not allow ""
+      rm -f /etc/circle.d/50-$IF-nat.rules
+      _UPDATE_FIREWALL_="1"
+    fi
+  done
+  echo -n "FW Rules changed: "
+  if [ "$_UPDATE_FIREWALL_" -eq "1" ]; then
+    echo -n "yes, "
+    circle start
+  else
+   echo "no"
+  fi
+  echo " done"
 }
 
 function init_namespace {
+  echo -n "Creating /etc/netns/monroe -> "
+  mkdir -p /etc/netns/monroe/
+  echo  "done"
+
   docker run -d --net=none --name $MONROE_NAMESPACE_CONTAINER_NAME base-$URL_NOOP /bin/sh /opt/monroe/noop.sh
   CID=$(docker ps --no-trunc -qf name=$MONROE_NAMESPACE_CONTAINER_NAME)
   if [ -z "$CID" ]; then
@@ -167,12 +194,15 @@ while [ -e ${_MNR_NAMESPACE_PATH_} ] || [ ! -z "$(docker ps --no-trunc -qf name=
   # Clean up OLD Bridges (auto cleans {MNS})
   echo -n "Cleaning up old bridge interfaces: "
   for BRIF in $CURRENT_BRIDGES; do
-    IF=${BRIF::-2}  # Remove Br to get to the InterfaceName
+    IF=$(cat /sys/class/net/${BRIF}/ifalias)  # InterfaceName saved in alias
     if [[ $INTERFACES_TO_BRIDGE != *$IF* ]]; then
       echo -n "."
       ip link del $BRIF 2>/dev/null || true
-      rm -f /etc/circle.d/50-$IF-nat.rules
-      _UPDATE_FIREWALL_="1"
+      if [ ! -z "$IF" ]; then
+        echo "" > /sys/class/net/${IF}/ifalias # ip link set $IF alias "" does not wokr on debian
+        rm -f /etc/circle.d/50-$IF-nat.rules
+        _UPDATE_FIREWALL_="1"
+      fi
     fi
   done
   echo " done"
@@ -187,6 +217,7 @@ while [ -e ${_MNR_NAMESPACE_PATH_} ] || [ ! -z "$(docker ps --no-trunc -qf name=
   fi
 
   echo "Creating/Updating Interface bridges: "
+  NR_IF_BR=$(echo $CURRENT_BRIDGES| tr -cd ' ' | wc -c)
   for IF in $INTERFACES_TO_BRIDGE; do
     if [ ! -z "$(echo $IF|egrep $OPINTERFACES)" ] && [ -x /usr/bin/usb2op ]; then
         OP=$(/usr/bin/usb2op $IF)
@@ -207,8 +238,11 @@ while [ -e ${_MNR_NAMESPACE_PATH_} ] || [ ! -z "$(docker ps --no-trunc -qf name=
       ${MNS} ip link set $OP up
       continue
     fi
-    if [ -z "$(ip link|grep ${IF}Br:)" ]; then
+
+    BR_IF="$(cat /sys/class/net/${IF}/ifalias)" || true
+    if [ -z "${BR_IF}" ] || [ -z "$(ip link show ${BR_IF} || true )" ]; then
       echo -ne "\tCreate Bridge Host $IF to Monroe $OP: "
+
       IPRANGE=$(/usr/bin/monroe-ifnum $IF $VETH_IPRANGE)
       TABLE=$(iftable $IF)
       if [ -z "$TABLE" ]; then
@@ -220,30 +254,34 @@ while [ -e ${_MNR_NAMESPACE_PATH_} ] || [ ! -z "$(docker ps --no-trunc -qf name=
       OUTADDR="${OUTMASK%/*}"
       MTU=$(cat /sys/class/net/${IF}/mtu)
 
-      echo -ne "\n\t\t* Create veth pair -> "
+      NR_IF_BR=$((NR_IF_BR+1))
+      BR_IF="MBr$NR_IF_BR"
+      echo -ne "\n\t\t* Create veth pair ${BR_IF} - ${OP} -> "
       # create veth interface pair
+      ip link set ${IF} alias ${BR_IF}
       ip link del montmp 2>/dev/null || true
-      ip link del ${IF}Br 2>/dev/null || true
-      ip link add ${IF}Br type veth peer name montmp
-      ip link set dev ${IF}Br mtu $MTU
+      ip link del ${BR_IF} 2>/dev/null || true
+      ip link add ${BR_IF} type veth peer name montmp
+      ip link set ${BR_IF} alias ${IF}
+      ip link set dev ${BR_IF} mtu $MTU
       ip link set dev montmp mtu $MTU
       ip link set montmp netns monroe
-      ip addr add ${IPRANGE}.1/24 dev ${IF}Br
-      ip link set ${IF}Br up
+      ip addr add ${IPRANGE}.1/24 dev ${BR_IF}
+      ip link set ${BR_IF} up
       ${MNS} ip link set montmp name $OP
       ${MNS} ip addr add ${IPRANGE}.2/24 dev $OP
       ${MNS} ip link set $OP up
       echo "done"
 
       # Add a manual arp entry, WORKAROUND on Ubuntu
-      HOSTHW=$(cat /sys/class/net/${IF}Br/address)
+      HOSTHW=$(cat /sys/class/net/${BR_IF}/address)
       MNRHW=$(${MNS} cat /sys/class/net/${IF}/address)
-      echo -ne "\t\t* Delete existing ARP entries (${IPRANGE}.1 -> ${IF}, ${IPRANGE}.2 -> ${IF}Br) -> "
+      echo -ne "\t\t* Delete existing ARP entries (${IPRANGE}.1 -> ${IF}, ${IPRANGE}.2 -> ${BR_IF}) -> "
       ${MNS} arp -d ${IPRANGE}.1 -i ${IF} 2> /dev/null || true
-      arp -d ${IPRANGE}.2 -i ${IF}Br 2> /dev/null || true
+      arp -d ${IPRANGE}.2 -i ${BR_IF} 2> /dev/null || true
       echo "done"
       echo -ne "\t\t* Create ARP entries (${IPRANGE}.1 -> ${HOSTHW}, ${IPRANGE}.2 -> ${MNRHW}) -> "
-      arp -s ${IPRANGE}.2 -i ${IF}Br ${MNRHW}
+      arp -s ${IPRANGE}.2 -i ${BR_IF} ${MNRHW}
       ${MNS} arp -s ${IPRANGE}.1 -i ${IF} ${HOSTHW}
       echo "done"
 
@@ -252,8 +290,8 @@ while [ -e ${_MNR_NAMESPACE_PATH_} ] || [ ! -z "$(docker ps --no-trunc -qf name=
       TARGET="/etc/circle.d/50-$IF-nat.rules"
       RULES="\
 \${ipt4} -t nat -A POSTROUTING -s ${IPRANGE}.2/24 -o ${IF} -j MASQUERADE
-\${ipt4} -I FORWARD 1 -i ${IF} -o ${IF}Br -j ACCEPT
-\${ipt4} -I FORWARD 1 -i ${IF}Br -o ${IF} -j ACCEPT"
+\${ipt4} -I FORWARD 1 -i ${IF} -o ${BR_IF} -j ACCEPT
+\${ipt4} -I FORWARD 1 -i ${BR_IF} -o ${IF} -j ACCEPT"
       echo "$RULES" > $TARGET
       _UPDATE_FIREWALL_="1"
       echo "done"

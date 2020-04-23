@@ -8,8 +8,8 @@ STATUS=$2
 USERDIR="/experiments/user"
 CONTAINER_NAME=monroe-$SCHEDID
 NEAT_CONTAINER_NAME=monroe-neat-proxy
-EXCLUDED_IF="Br|lo|metadata|wwan|ifb|docker"
-OPINTERFACES="nlw_"
+EXCLUDED_IF="^MBr[0-9]+$|^lo$|^metadata$|^wwan[0-9]+$|^ifb[0-9]+$|^docker[0-9]+$"
+OPINTERFACES="^nlw_[0-9]+$|^wwan[0-9]+$"
 UNWANTED_TASKS_AT_EXPERIMENT_START=("docker pull" "rsync" "ansible" "ansible-wrapper" "apt" "scp")
 
 URL_NEAT_PROXY=monroe/neat-proxy

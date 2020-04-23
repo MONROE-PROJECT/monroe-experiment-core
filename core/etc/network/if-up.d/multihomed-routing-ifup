@@ -2,8 +2,6 @@
 
 handle_nm_ifup()
 {
-    echo "$(env)" >> /tmp/nm-env.log
-    echo "\n" >> /tmp/nm-env.log
     for ((i=0; i < IP4_NUM_ADDRESSES; i++))
     do
         varname="IP4_ADDRESS_$i"
@@ -20,6 +18,10 @@ handle_nm_ifup()
         fi
 
         #get route
+        PID=$(pgrep -f "table_allocator_client -4 -s -a $network_address -n $netmask -i $IFACE -d tas_socket")
+        if [ $? -eq 0 ] && [ ! -z "$PID" ]; then
+            kill $PID
+        fi
         rt_table=$(/usr/sbin/table_allocator_client -4 -s -a "$network_address" -n "$netmask" -i "$IFACE" -d tas_socket)
 
         if [ "$rt_table" -eq 0 ];
@@ -57,9 +59,11 @@ handle_nm_ifup()
 
 handle_ifup()
 {
-    echo "$(env)" >> /tmp/ifup-env.log
-    echo "\n" >> /tmp/ifup-env.log
     #get route
+    PID=$(pgrep -f "table_allocator_client -4 -s -a $IF_ADDRESS -n $IF_NETMASK -i $IFACE -d tas_socket")
+    if [ $? -eq 0 ] && [ ! -z "$PID" ]; then
+        kill $PID
+    fi
     rt_table=$(/usr/sbin/table_allocator_client -4 -s -a "$IF_ADDRESS" -n "$IF_NETMASK" -i "$IFACE" -d tas_socket)
 
     if [ "$rt_table" -eq 0 ];

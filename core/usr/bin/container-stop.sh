@@ -11,8 +11,6 @@ USAGEDIR=/monroe/usage/netns
 MNS="ip netns exec monroe"
 
 NEAT_CONTAINER_NAME=monroe-neat-proxy
-EXCLUDED_IF="Br|lo|metadata|wwan|ifb|docker"
-OPINTERFACES="nlw_"
 URL_NEAT_PROXY="monroe/neat-proxy"
 NEAT_CG_DIR="/tmp/cgroupv2/neat-proxy"
 
@@ -110,7 +108,7 @@ if [ ! -z "$NEAT_PROXY"  ] && [ -x /usr/bin/monroe-neat-init ]; then # If this i
   docker stop $NEAT_CONTAINER_NAME || echo "Could not stop $NEAT_CONTAINER_NAME"
   docker rm -f $NEAT_CONTAINER_NAME || echo "Could not remove $NEAT_CONTAINER_NAME"
   umount ${NEAT_CG_DIR} &>/dev/null || echo "Could not umount ${NEAT_CG_DIR}"
-  rm -rf ${NEAT_CG_DIR} &>/dev/null 
+  rm -rf ${NEAT_CG_DIR} &>/dev/null
 fi
 
 echo -n "Syncing traffic statistics... "

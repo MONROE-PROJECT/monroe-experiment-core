@@ -7,8 +7,8 @@
 #NEAT_CONTAINER_NAME=monroe-neat-proxy
 #URL_NEAT_PROXY=monroe/neat-proxy
 #NEAT_CG_DIR="/tmp/cgroupv2/neat-proxy"
-#EXCLUDED_IF="Br|lo|metadata|wwan|ifb|docker"
-#OPINTERFACES="nlw_|wwan"
+#EXCLUDED_IF="^MBr[0-9]+$|^lo$|^metadata$|^wwan[0-9]+$|^ifb[0-9]+$|^docker[0-9]+$"
+#OPINTERFACES="^nlw_[0-9]+$|^wwan[0-9]+$"
 #VETH_IPRANGE=172.18
 #MONROE_NAMESPACE_CONTAINER_NAME=monroe-namespace
 

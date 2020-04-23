@@ -57,6 +57,7 @@ if [ -z "$CID_PROXY" ]; then
 fi
 
 for IF in $INTERFACES; do
+  BR_IF=$(cat /sys/class/net/${IF}/ifalias)
   # Firewall rules to set up TPROXY
   TARGET="/etc/circle.d/60-$IF-neat-proxy.rules"
   if [ ! -f ${TARGET} ]; then
@@ -67,7 +68,7 @@ for IF in $INTERFACES; do
     RULES="\
 \${ipt4} -A INPUT -p tcp -s ${IPRANGE}.0/24 -d localhost -j DROP
 \${ipt4} -A INPUT -p tcp -s ${IPRANGE}.0/24 -j ACCEPT
-\${ipt4} -t mangle -A PREROUTING -p tcp -i ${IF}Br -j TPROXY --tproxy-mark 0x1/0x1 --on-port 9876"
+\${ipt4} -t mangle -A PREROUTING -p tcp -i ${BR_IF} -j TPROXY --tproxy-mark 0x1/0x1 --on-port 9876"
     echo "$RULES" > $TARGET
     echo "enabled neat-proxy on ${IF}"
   fi

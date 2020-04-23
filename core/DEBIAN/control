@@ -1,5 +1,5 @@
 Package: monroe-experiment-core
-Version: 0.9.9-##DEBIAN_VERSION##
+Version: 0.9.9.1-##DEBIAN_VERSION##
 Section: devel
 Priority: optional
 Architecture: amd64

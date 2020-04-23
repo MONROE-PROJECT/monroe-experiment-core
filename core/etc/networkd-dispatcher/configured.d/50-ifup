@@ -14,6 +14,10 @@ IF_GATEWAY=$(echo $json | jq -r .Gateway[] | cut -d' ' -f1)
 IF_DNS=$(echo $json | jq -r .DNS[])
 
 #get route
+PID=$(pgrep -f "table_allocator_client -4 -s -a $IF_ADDRESS -n $IF_NETMASK_UGLY -i $IFACE -d tas_socket")
+if [ $? -eq 0 ] && [ ! -z "$PID" ]; then
+    kill $PID
+fi
 rt_table=$(/usr/sbin/table_allocator_client -4 -s -a "$IF_ADDRESS" -n "$IF_NETMASK_UGLY" -i "$IFACE" -d tas_socket)
 
 if [ "$rt_table" -eq 0 ];
