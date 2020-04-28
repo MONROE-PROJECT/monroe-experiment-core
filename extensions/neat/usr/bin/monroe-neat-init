@@ -56,6 +56,7 @@ if [ -z "$CID_PROXY" ]; then
     echo "is started"
 fi
 
+LOCALHOSTNET=$(ip addr show lo | awk -F"[ ]+" '/inet / {print $3}')
 for IF in $INTERFACES; do
   BR_IF=$(cat /sys/class/net/${IF}/ifalias)
   # Firewall rules to set up TPROXY
@@ -63,11 +64,11 @@ for IF in $INTERFACES; do
   if [ ! -f ${TARGET} ]; then
     IPRANGE=$(/usr/bin/monroe-ifnum $IF $VETH_IPRANGE)
     #    If on a physical node also add these
-    #    \${ipt4} -A INPUT -p tcp -s ${IPRANGE}.0/24 -d 172.16.253.1/24 -j DROP
-    #    \${ipt4} -A INPUT -p tcp -s ${IPRANGE}.0/24 -d 172.16.254.1/24 -j DROP
+    #    \${ipt4} -I INPUT -p tcp -s ${IPRANGE}.0/24 -d 172.16.253.1/24 -j DROP
+    #    \${ipt4} -I INPUT -p tcp -s ${IPRANGE}.0/24 -d 172.16.254.1/24 -j DROP
     RULES="\
-\${ipt4} -A INPUT -p tcp -s ${IPRANGE}.0/24 -d localhost -j DROP
-\${ipt4} -A INPUT -p tcp -s ${IPRANGE}.0/24 -j ACCEPT
+\${ipt4} -I INPUT -p tcp -s ${IPRANGE}.0/24 -j ACCEPT
+\${ipt4} -I INPUT -p tcp -s ${IPRANGE}.0/24 -d ${LOCALHOSTNET} -j DROP
 \${ipt4} -t mangle -A PREROUTING -p tcp -i ${BR_IF} -j TPROXY --tproxy-mark 0x1/0x1 --on-port 9876"
     echo "$RULES" > $TARGET
     echo "enabled neat-proxy on ${IF}"
