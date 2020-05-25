@@ -35,6 +35,8 @@ def set_experiment(action, schedid):
     try:
         cmd=['/usr/bin/container-{}.sh'.format(action),schedid]
         if action == "deploy":
+            # Workaround for files with same name on physcial node
+            cmd=['/opt/monroe/tap-agent/container-deploy.sh',schedid]
             cmd.append('wait')
         check_output(cmd)
     except CalledProcessError as e:
@@ -56,14 +58,14 @@ def get_experiments(only_running = False):
         retur = check_output(cmd)
     except CalledProcessError as e:
         retur = e.output
-    
+
     return str(retur, 'utf-8').rstrip().split()
 
 def abort_with_response(message, status):
     error_message = json.dumps({"Message": str(message)})
     abort(Response(error_message, status))
 
-## Deploy ################################################################################ 
+## Deploy ################################################################################
 @app.route('/api/v1.0/experiment/<string:schedid>', methods=['POST'])
 def deploy_experiment(schedid):
     check_api_key(request.headers)
@@ -71,28 +73,28 @@ def deploy_experiment(schedid):
     print(f"Trying to deploy {schedid}")
     if not request.json or not 'script' in request.json:
         abort_with_response(f"No script specified for : {schedid}", status.HTTP_412_PRECONDITION_FAILED)
-    
-    # We provided a schedid with wrong fromat 
-    # TODO: print help message? 
+
+    # We provided a schedid with wrong fromat
+    # TODO: print help message?
     if re.search(r'[^A-Za-z0-9_\-]',schedid):
         abort_with_response(f"Invalid schedid : {schedid}, allowed values [A-z],[0-9],[_,-]", status.HTTP_412_PRECONDITION_FAILED)
-   
+
     # We have a correct schedid
     # TODO : set schedid in the config file ?
     experiment_config = os.path.normpath(("{}/{}.conf").format(_EXPERIMENT_PATH, schedid))
-    
+
     # Does the file already (ie is it already deployed)
     if schedid in get_experiments(only_running=False):
         abort_with_response(f"Experiment already exist : {schedid}", status.HTTP_409_CONFLICT)
 
-    # Create the experiment config file  
+    # Create the experiment config file
     try:
         with open(experiment_config, "w") as f:
             json.dump(fp=f, obj=request.json)
     except EnvironmentError:
         abort_with_response(f"Could not create configuration file {experiment_config}", status.HTTP_500_INTERNAL_SERVER_ERROR)
-    
-    # Yaay we have a config file 
+
+    # Yaay we have a config file
     # TODO: read status form container deploy and .status file
     set_experiment("deploy", schedid)
 
@@ -103,10 +105,10 @@ def deploy_experiment(schedid):
 def start_experiment(schedid):
     check_api_key(request.headers)
     running=get_experiments(only_running=True)
-    #Maybe not necessary 
+    #Maybe not necessary
     if running:
         abort_with_response(f"Cannot start, experiment(s) is/are running : {running}", status.HTTP_409_CONFLICT)
-    
+
     if schedid not in get_experiments(only_running=False):
         abort_with_response(f"Experiment not deployed : {schedid}", status.HTTP_412_PRECONDITION_FAILED)
 
@@ -121,11 +123,11 @@ def start_experiment(schedid):
 def stop_experiment(schedid):
     check_api_key(request.headers)
     experiment = os.path.normpath(("{}/{}").format(_EXPERIMENT_PATH, schedid))
-    
-    # Maybe not necessary 
+
+    # Maybe not necessary
     if schedid not in get_experiments(only_running=False):
         abort_with_response(f"Experiment not deployed : {schedid}", status.HTTP_412_PRECONDITION_FAILED)
-    
+
     if os.path.isfile("{}.{}".format(experiment,"stopped")):
         abort_with_response(f"Experiment already stopped : {schedid}", status.HTTP_410_GONE)
 
@@ -134,23 +136,24 @@ def stop_experiment(schedid):
     set_experiment("stop", schedid)
 
     return jsonify({ "Message": "{} succesfully stoppped".format(schedid)}), status.HTTP_200_OK
- 
+
 ## Get status ###########################################################################
 @app.route('/api/v1.0/experiment/<string:schedid>', methods=['GET'])
 def get_experiment_status(schedid):
     if schedid in get_experiments(only_running=True):
-        return jsonify({ "Message": f"Experiment {schedid} is running"}), status.HTTP_200_OK        
+        return jsonify({ "Message": f"Experiment {schedid} is running"}), status.HTTP_200_OK
     elif schedid in get_experiments(only_running=False):
         return jsonify({ "Message": f"Experiment {schedid} is deployed but not running"}), status.HTTP_428_PRECONDITION_REQUIRED
     else:
         return jsonify({ "Message": f"Experiment {schedid} do not exist"}), status.HTTP_404_NOT_FOUND
-    
+
 ## Get status all ########################################################################
 @app.route('/api/v1.0/experiment',strict_slashes=False, methods=['GET'])
 def get_experiment_status_all():
+    # Workaround for files with same name on physcial node
     try:
-        cmd=['/bin/systemctl','-q', 'is-active','monroe-namespace.service']
-        check_output(cmd)
+        cmd='/usr/bin/docker ps | /bin/grep monroe-namespace'
+        check_output(cmd, shell=True)
     except CalledProcessError as e:
         abort_with_response("Monroe subsystem(ie namespace) is down", status.HTTP_503_SERVICE_UNAVAILABLE)
 
@@ -165,26 +168,27 @@ def get_experiment_results(schedid):
     check_api_key(request.headers)
 
     experiment_syncfolder = os.path.normpath(("{}/{}").format(_SYNC_PATH, schedid))
-    # TODO : Use temporary directory/filename 
+    # TODO : Use temporary directory/filename
     result_zip='/tmp/results_{}.zip'.format(schedid)
-        
+
     # Sync the experiment results (monroe only allows to sync all experiments)
     # TODO: Save the log ?
     try:
-        cmd=['/usr/bin/monroe-sync-experiments']
+        # Workaround for files with same name on physcial node
+        cmd=['/opt/monroe/tape-agent/monroe-sync-experiments']
         check_output(cmd)
     except CalledProcessError as e:
         abort_with_response(f"Sync failed :{e.output}", status.HTTP_500_INTERNAL_SERVER_ERROR)
 
     if _SYNC_REPO:
-        return jsonify({ "Message": f"{schedid} have been synched to : {_SYNC_REPO}:{_SYNC_REPO}"}), status.HTTP_200_OK 
-       
-    # If we have a local repo we zip everthing up into a file 
+        return jsonify({ "Message": f"{schedid} have been synched to : {_SYNC_REPO}:{_SYNC_REPO}"}), status.HTTP_200_OK
+
+    # If we have a local repo we zip everthing up into a file
     # crawling through directory and subdirectories
-    with ZipFile(result_zip,'w') as zip: 
-        for root, directories, files in os.walk(experiment_syncfolder): 
-            for filename in files: 
-                # join the two strings in order to form the full filepath. 
+    with ZipFile(result_zip,'w') as zip:
+        for root, directories, files in os.walk(experiment_syncfolder):
+            for filename in files:
+                # join the two strings in order to form the full filepath.
                 file_path=os.path.join(root, filename)
                 zip.write(file_path, os.path.relpath(file_path, _SYNC_PATH))
 
@@ -199,13 +203,13 @@ def get_experiment_results(schedid):
     return send_file(result_zip)
 
 
-## deploy + start ################################################################################ 
+## deploy + start ################################################################################
 @app.route('/api/v1.0/experiment/<string:schedid>/start', methods=['POST'])
 def deploy_start_experiment(schedid):
     deploy_experiment(schedid)
     return start_experiment(schedid)
 
-## stop + get ################################################################################ 
+## stop + get ################################################################################
 @app.route('/api/v1.0/experiment/<string:schedid>/stop', methods=['POST'])
 def stop_get_experiment(schedid):
     stop_experiment(schedid)
@@ -219,5 +223,5 @@ if __name__ == '__main__':
     else:
         print("Using ad hoc mode")
         _SSL_CONTEXT='adhoc'
-    
+
     app.run(ssl_context=_SSL_CONTEXT, host=_LISTEN_ADDRESS, debug=_DEBUG,port=_TAP_AGENT_PORT)
