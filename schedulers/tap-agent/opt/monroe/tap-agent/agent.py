@@ -178,7 +178,11 @@ def get_experiment_results(schedid):
 
     if _SYNC_REPO:
         return jsonify({ "Message": f"{schedid} have been synched to : {_SYNC_REPO}:{_SYNC_REPO}"}), status.HTTP_200_OK 
-       
+    
+    # Write a error report if the experiment folder cannot be found/synched
+    if not os.path.isdir(experiment_syncfolder):
+        abort_with_response("Could not get results for experiment {}".format(schedid), status.HTTP_404_NOT_FOUND)
+        
     # If we have a local repo we zip everthing up into a file 
     # crawling through directory and subdirectories
     with ZipFile(result_zip,'w') as zip: 
