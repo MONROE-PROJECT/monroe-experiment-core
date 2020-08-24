@@ -8,7 +8,7 @@ ASYNC=$2
 USERDIR="/experiments/user"
 CHECK_STORAGE_QUOTA=0
 
-# TODO: set in status file 
+# TODO: set in status file
 CONTAINER_NAME=monroe-$SCHEDID
 
 ERROR_CONTAINER_NOT_FOUND=100
@@ -18,7 +18,7 @@ ERROR_MAINTENANCE_MODE=103
 ERROR_CONTAINER_DOWNLOADING=104
 ERROR_EXPERIMENT_IN_PROGRESS=105
 
-# Update above default variables if needed 
+# Update above default variables if needed
 . /etc/default/monroe-experiments
 
 _tmpfile_=/tmp/container-deploy.$SCHEDID
@@ -47,7 +47,7 @@ fi
 echo "disabled."
 
 echo -n "Checking for running experiments... "
-RUNNING_EXPERIMENTS=$(/usr/bin/experiments || true )
+RUNNING_EXPERIMENTS=$(/opt/monroe/tap-agent/experiments || true )
 if [ ! -z "$RUNNING_EXPERIMENTS" ]; then
    echo "experiment : $RUNNING_EXPERIMENTS is running, abort"
    exit $ERROR_EXPERIMENT_IN_PROGRESS
@@ -105,7 +105,7 @@ PROC_ID=$!
 # check results every 10 seconds for 60 seconds, or continue next time
 # TODO: Clearify What is next time/what calls this script again ?
 _LOOPCOUNT=1
-while [ "$_LOOPCOUNT" -le 6 ]; do 
+while [ "$_LOOPCOUNT" -le 6 ]; do
   sleep 10
   if kill -0 "$PROC_ID" >/dev/null 2>&1; then
     echo -n "."

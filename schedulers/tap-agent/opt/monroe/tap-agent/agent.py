@@ -33,10 +33,8 @@ app = Flask(__name__)
 # TODO : Check so flask is multithreaded
 def set_experiment(action, schedid):
     try:
-        cmd=['/usr/bin/container-{}.sh'.format(action),schedid]
+        cmd=['/opt/monroe/tap-agent/container-{}.sh'.format(action),schedid]
         if action == "deploy":
-            # Workaround for files with same name on physcial node
-            cmd=['/opt/monroe/tap-agent/container-deploy.sh',schedid]
             cmd.append('wait')
         check_output(cmd)
     except CalledProcessError as e:
@@ -52,7 +50,7 @@ def check_api_key(headers):
 def get_experiments(only_running = False):
     retur = ""
     try:
-        cmd = ['/usr/bin/experiments']
+        cmd = ['/opt/monroe/tap-agent/experiments']
         if not only_running:
             cmd.append('-a')
         retur = check_output(cmd)
@@ -175,7 +173,7 @@ def get_experiment_results(schedid):
     # TODO: Save the log ?
     try:
         # Workaround for files with same name on physcial node
-        cmd=['/opt/monroe/tape-agent/monroe-sync-experiments']
+        cmd=['/opt/monroe/tap-agent/monroe-sync-experiments']
         check_output(cmd)
     except CalledProcessError as e:
         abort_with_response(f"Sync failed :{e.output}", status.HTTP_500_INTERNAL_SERVER_ERROR)

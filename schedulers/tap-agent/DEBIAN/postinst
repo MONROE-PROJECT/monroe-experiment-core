@@ -7,3 +7,4 @@ sed -i "s#TAP_AGENT_KEY=.*#TAP_AGENT_KEY=/opt/monroe/tap-agent/key.pem#g" /opt/m
 
 systemctl enable monroe-tap-agent 
 systemctl start  monroe-tap-agent
+/usr/sbin/circle restart

@@ -3,7 +3,7 @@ Experimental MONROE as a package (MaaP).
 This is currently the Monroe DEV branch.
 
 ## Rationale
-The rationale behind this repo/package is to allow monroe (with minimal dependencys) to be installed on a fresh Debian installation.
+The rationale behind this repo/package is to allow monroe (with minimal dependencys) to be installed on a Monroe installation.
 
 ## Howto Build (need to have docker,bash and internet connection)
 1.  clone this repo
